@@ -17,10 +17,11 @@ export interface NavGroup {
 
 export interface NavItem {
     title: string;
-    href: string;
-    icon?: LucideIcon | null;
-    isActive?: boolean;
+    href?: string;
+    icon?: React.ElementType;
+    children?: NavItem[]; // 👈 soporte para subitems
 }
+
 
 export interface SharedData {
     name: string;

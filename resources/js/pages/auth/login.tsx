@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 type LoginProps = {
@@ -21,6 +21,12 @@ export default function Login({ status, canResetPassword }: LoginProps) {
   const [showSplash, setShowSplash] = useState(true);
   const [logoLoaded, setLogoLoaded] = useState(false);
   const [formLogoLoaded, setFormLogoLoaded] = useState(false);
+
+  // Obtener mensajes flash de la sesión
+  const { props } = usePage();
+  const warning = props.flash?.warning;
+  const info = props.flash?.info;
+  const error = props.flash?.error;
 
   useEffect(() => {
     return () => {
@@ -74,7 +80,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
           />
         </div>
       )}
+      
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+      
       <div className="relative z-10 w-full max-w-md rounded-lg border border-white/20 bg-black/40 px-6 py-4 text-white shadow-2xl backdrop-blur-xl">
         <div className="-mb-10 flex justify-center">
           <img
@@ -86,11 +94,35 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             }`}
           />
         </div>
-        <h2 className=" mb-4 text-center text-4xl font-bookstore  font-bold">
+        
+        <h2 className="mb-4 text-center text-4xl font-bookstore font-bold">
           Iniciar sesión
         </h2>
 
-        {status && <div className="mb-4 text-sm text-green-500">{status}</div>}
+        {/* Mensajes de estado */}
+        {status && (
+          <div className="mb-4 rounded-md bg-green-500/20 border border-green-400/50 px-3 py-2 text-sm text-green-200">
+            {status}
+          </div>
+        )}
+        
+        {warning && (
+          <div className="mb-4 rounded-md bg-yellow-500/20 border border-yellow-400/50 px-3 py-2 text-sm text-yellow-200">
+            {warning}
+          </div>
+        )}
+        
+        {info && (
+          <div className="mb-4 rounded-md bg-blue-500/20 border border-blue-400/50 px-3 py-2 text-sm text-blue-200">
+            {info}
+          </div>
+        )}
+        
+        {error && (
+          <div className="mb-4 rounded-md bg-red-500/20 border border-red-400/50 px-3 py-2 text-sm text-red-200">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={submit} noValidate>
           <div className="mb-3">

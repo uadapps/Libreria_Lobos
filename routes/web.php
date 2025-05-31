@@ -1,28 +1,85 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use App\Http\Controllers\UserController;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+
+/*
+|--------------------------------------------------------------------------
+| Configuración Principal de Rutas
+|--------------------------------------------------------------------------
+| Este archivo contiene solo la configuración principal y las inclusiones
+| de módulos. Cada funcionalidad está separada en su propio archivo.
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Ruta Principal
+|--------------------------------------------------------------------------
+*/
+
 Route::get('/', function () {
     if (Auth::check()) {
-    return redirect()->route('dashboard'); // o la ruta que tú uses
-}
+        return redirect()->route('dashboard');
+    }
+    
+    return Inertia::render('auth/login', [  // Mantener minúsculas como tienes
+        'canResetPassword' => Route::has('password.request'),
+        'status' => session('status'),
+    ]);
+})->name('home');
 
-    return Inertia::render('auth/login');
-})->name('login');
+/*
+|--------------------------------------------------------------------------
+| Dashboard Principal
+|--------------------------------------------------------------------------
+*/
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('usuarios', UserController::class);
-});
-
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'check.user.active'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+
+
+Route::get('/roles', function () {
+    return response()->json(
+        \Spatie\Permission\Models\Role::select('id', 'name')
+            ->orderBy('name')
+            ->get()
+    );
+})->middleware('permission:usuarios.crear')->name('list');
+
+
+/*
+|--------------------------------------------------------------------------
+| Módulos de Funcionalidad
+|--------------------------------------------------------------------------
+| Cada módulo maneja una funcionalidad específica del sistema
+*/
+
+// Módulo de gestión de usuarios
+require __DIR__ . '/modules/usuarios.php';
+
+require __DIR__ . '/modules/roles.php';
+
+// Módulo de API endpoints
+require __DIR__ . '/modules/api.php';
+
+/*
+|--------------------------------------------------------------------------
+| Archivos de Configuración del Sistema
+|--------------------------------------------------------------------------
+*/
+
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';
+
+/*
+|--------------------------------------------------------------------------
+| Manejo de Errores y Fallbacks
+|--------------------------------------------------------------------------
+*/
+
+require __DIR__ . '/core/fallback.php';

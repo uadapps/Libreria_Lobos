@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use App\Models\User;
 
 class LoginRequest extends FormRequest
 {
@@ -39,9 +40,35 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        // Verificar si el usuario existe y está activo ANTES de intentar autenticar
+        $user = User::where('username', $this->username)
+                    ->where('visible', 1)
+                    ->first();
 
+        if (!$user) {
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'username' => ['Las credenciales no coinciden con nuestros registros.'],
+            ]);
+        }
+
+        if ($user->status == 0) {
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'username' => ['Tu cuenta ha sido desactivada. Contacta al administrador.'],
+            ]);
+        }
+
+        // Intentar autenticación con las condiciones adicionales
+        $credentials = [
+            'username' => $this->username,
+            'password' => $this->password,
+            'status' => 1,
+            'visible' => 1
+        ];
+
+        if (!Auth::attempt($credentials, $this->boolean('remember'))) {
+            RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
                 'username' => __('auth.failed'),
             ]);
@@ -57,7 +84,7 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (!RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }
 

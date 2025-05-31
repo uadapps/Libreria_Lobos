@@ -6,20 +6,18 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
+use Spatie\Permission\Models\Role;
+
 
 class User extends Authenticatable
 {
-    use Notifiable, HasFactory;
-
-    // 🔁 Esta es tu tabla real
+use HasApiTokens, HasFactory, Notifiable, HasRoles;
     protected $table = 'LB_usuarios';
-
-    // 🧠 Ajusta esto si tu PK no se llama 'id'
-    protected $primaryKey = 'id_empleado';
-
+    protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'int';
-
     protected $fillable = [
         'id_empleado',
         'nombres',
@@ -35,13 +33,13 @@ class User extends Authenticatable
         'role_id',
         'created_by',
         'updated_by',
+        'remember_token',
     ];
-
+    protected $guard_name = 'web';
     protected $hidden = [
         'password',
         'remember_token',
     ];
-
     protected $casts = [
         'last_login_at' => 'datetime',
         'created_by' => 'integer',
@@ -49,7 +47,6 @@ class User extends Authenticatable
         'visible' => 'boolean',
         'status' => 'boolean',
     ];
-
     public $timestamps = false;
     public function getNombreCompletoAttribute()
     {
@@ -64,9 +61,12 @@ class User extends Authenticatable
         }
     }
     protected $appends = ['full_name'];
-
     public function getFullNameAttribute()
     {
         return "{$this->nombres} {$this->apellidos}";
     }
+    public function role()
+{
+    return $this->belongsTo(Role::class, 'role_id');
+}
 }
