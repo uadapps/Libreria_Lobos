@@ -58,7 +58,7 @@ export default function UsuariosIndex({ usuarios }: UsuariosIndexProps) {
     const permiso_editar = permisos.includes('usuarios.editar');
     const permiso_borrar = permisos.includes('usuarios.eliminar');
     const cambiar_status = permisos.includes('usuarios.cambiar-status');
-    
+
     const [isOpen, setIsOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<Usuario | null>(null);
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
@@ -490,13 +490,13 @@ export default function UsuariosIndex({ usuarios }: UsuariosIndexProps) {
                 />
             )}
 
-            <ToastContainer 
-                position="top-center" 
-                autoClose={1000} 
-                hideProgressBar 
-                closeOnClick 
-                pauseOnHover 
-                theme="colored" 
+            <ToastContainer
+                position="top-center"
+                autoClose={1000}
+                hideProgressBar
+                closeOnClick
+                pauseOnHover
+                theme="colored"
             />
         </AppLayout>
     );

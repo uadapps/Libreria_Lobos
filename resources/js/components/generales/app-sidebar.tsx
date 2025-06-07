@@ -5,11 +5,17 @@ import { NavUser } from '@/components/generales/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, Plus,Warehouse } from 'lucide-react';
 import AppLogo from './app-logo';
 
+type AuthProps = {
+    auth?: {
+        permissions?: string[];
+    };
+};
+
 export function AppSidebar() {
-    const { props } = usePage();
+    const { props } = usePage<AuthProps>();
     const permisos = props.auth?.permissions || [];
 
     const mainNavItems: NavItem[] = [
@@ -28,6 +34,17 @@ export function AppSidebar() {
                           : []),
                       ...(permisos.includes('roles.ver')
                           ? [{ title: 'Roles', href: '/roles/gestion', icon: BookOpen }]
+                          : []),
+                  ],
+              }]
+            : []),
+        ...(permisos.includes('inventario.gestionar')
+            ? [{
+                  title: 'Inventarios',
+                  icon:  Warehouse,
+                  children: [
+                      ...(permisos.includes('inventario.periodos-listar')
+                          ? [{ title: 'Ver Inventarios', href: '/inventario/periodos', icon: BookOpen }]
                           : []),
                   ],
               }]

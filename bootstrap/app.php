@@ -26,10 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-            CheckUserActive::class,  // ← Agregar esta línea
+            CheckUserActive::class,
         ]);
         
-        // Alias de middlewares personalizados
         $middleware->alias([
             'check.user.active' => \App\Http\Middleware\CheckUserActive::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Http\Controllers\InventoryPeriodController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,7 +23,7 @@ Route::get('/', function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
     }
-    
+
     return Inertia::render('auth/login', [  // Mantener minúsculas como tienes
         'canResetPassword' => Route::has('password.request'),
         'status' => session('status'),
@@ -40,7 +41,6 @@ Route::middleware(['auth', 'verified', 'check.user.active'])->group(function () 
         return Inertia::render('dashboard');
     })->name('dashboard');
 });
-
 
 
 Route::get('/roles', function () {
@@ -67,6 +67,13 @@ require __DIR__ . '/modules/roles.php';
 // Módulo de API endpoints
 require __DIR__ . '/modules/api.php';
 
+
+// Modulo de gestion de libros
+require __DIR__ . '/modules/libros.php';
+
+
+// Módulo de inventario
+require __DIR__ . '/modules/inventario.php';
 /*
 |--------------------------------------------------------------------------
 | Archivos de Configuración del Sistema
