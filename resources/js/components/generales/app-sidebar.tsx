@@ -46,9 +46,17 @@ export function AppSidebar() {
                       ...(permisos.includes('inventario.periodos-listar')
                           ? [{ title: 'Ver Inventarios', href: '/inventario/periodos', icon: BookOpen }]
                           : []),
+                        ...(permisos.includes('libros.factura-registrar')
+                            ? [{ title: 'Añadir Productos', href: '/libros-factura', icon: Plus }]
+                            : []),
+
                   ],
               }]
             : []),
+
+
+
+
     ];
 
     const footerNavItems: NavItem[] = [];
