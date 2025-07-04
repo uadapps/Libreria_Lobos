@@ -7,17 +7,27 @@ class LBProveedor extends Model
 {
     protected $table = 'LB_proveedores';
     protected $fillable = [
+        'id',
         'nombre',
+        'rfc',
+        'regimen_fiscal',
         'contacto',
         'telefono',
-        'correo',
+        'email',
         'direccion',
-        'created_at',
-        'updated_at'
+        'codigo_postal',
+        'terminos_pago',
+        'activo',
     ];
+ 
+    protected $casts = [
+        'activo' => 'boolean',
+    ];
+ 
 
+   
     public function facturas()
     {
-        return $this->hasMany(LBFacturaLibro::class, 'proveedor_id');
+        return $this->hasMany(LBFacturasLibros::class, 'proveedor_id');
     }
 }

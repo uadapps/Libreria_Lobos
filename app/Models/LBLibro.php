@@ -14,7 +14,8 @@ class LBLibro extends Model
         'edicion',
         'anio',
         'genero',
-        'precio_sugerido',
+        'precio_compra',
+        'precio_venta',
         'autor'
     ];
 

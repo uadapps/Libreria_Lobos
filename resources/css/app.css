@@ -190,3 +190,88 @@
   font-style: normal;
 }
 
+/* Agrega esto a tu app.css */
+
+/* Tema Default */
+.theme-default {
+  --primary: 59 130 246; /* blue-500 */
+  --primary-foreground: 255 255 255;
+  --accent: 59 130 246;
+}
+
+/* Tema Red */
+.theme-red {
+  --primary: 239 68 68; /* red-500 */
+  --primary-foreground: 255 255 255;
+  --accent: 239 68 68;
+  --destructive: 220 38 38; /* red-600 */
+}
+
+/* Tema Rose */
+.theme-rose {
+  --primary: 244 63 94; /* rose-500 */
+  --primary-foreground: 255 255 255;
+  --accent: 244 63 94;
+}
+
+/* Tema Orange */
+.theme-orange {
+  --primary: 249 115 22; /* orange-500 */
+  --primary-foreground: 255 255 255;
+  --accent: 249 115 22;
+}
+
+/* Tema Green */
+.theme-green {
+  --primary: 34 197 94; /* green-500 */
+  --primary-foreground: 255 255 255;
+  --accent: 34 197 94;
+}
+
+/* Tema Blue */
+.theme-blue {
+  --primary: 59 130 246; /* blue-500 */
+  --primary-foreground: 255 255 255;
+  --accent: 59 130 246;
+}
+
+/* Tema Yellow */
+.theme-yellow {
+  --primary: 234 179 8; /* yellow-500 */
+  --primary-foreground: 0 0 0; /* texto negro para contraste */
+  --accent: 234 179 8;
+}
+
+/* Tema Violet */
+.theme-violet {
+  --primary: 139 92 246; /* violet-500 */
+  --primary-foreground: 255 255 255;
+  --accent: 139 92 246;
+}
+
+/* Clases utilitarias */
+.bg-primary {
+  background-color: rgb(var(--primary));
+}
+
+.text-primary {
+  color: rgb(var(--primary));
+}
+
+.text-primary-foreground {
+  color: rgb(var(--primary-foreground));
+}
+
+.border-primary {
+  border-color: rgb(var(--primary));
+}
+
+/* Para botones */
+.btn-primary {
+  background-color: rgb(var(--primary));
+  color: rgb(var(--primary-foreground));
+}
+
+.btn-primary:hover {
+  background-color: rgb(var(--primary) / 0.9);
+}
