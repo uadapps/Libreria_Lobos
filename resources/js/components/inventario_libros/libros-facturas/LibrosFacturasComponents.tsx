@@ -1,7 +1,6 @@
 // ============================================
-// 📁 src/components/libros/LibrosFacturasComponents.tsx - COMPONENTES AUXILIARES
+// 📁 components/libros-facturas/LibrosFacturasComponents.tsx - COMPONENTES INTEGRADOS
 // ============================================
-import { Button } from '@/components/ui/button';
 import React, { useEffect } from 'react';
 import {
   Save,
@@ -12,11 +11,15 @@ import {
   Database,
   Users,
   Building2,
-  Tag
+  Tag,
+  BarChart3,
+  Loader
 } from 'lucide-react';
-import { LibroCompleto, EstadisticasLibros } from '../../types/LibroCompleto';
+import { LibroCompleto, EstadisticasLibros } from '@/types/LibroCompleto';
 
-// ✅ TIPOS para el guardado
+// =============================================
+// 🎯 TIPOS E INTERFACES
+// =============================================
 export interface ResultadoGuardado {
   guardados: number;
   errores: number;
@@ -40,7 +43,20 @@ export interface EstadisticasPostGuardado {
   ultima_actualizacion: string;
 }
 
-// ✅ Componente de Flash Messages
+export interface EstadisticasBusqueda {
+  total: number;
+  encontrados: number;
+  noEncontrados: number;
+  tablasNuevas: number;
+  tablasViejas: number;
+  apisExternas: number;
+  isbnsOriginales: string[];
+  ultimaActualizacion: Date;
+}
+
+// =============================================
+// 📢 COMPONENTE DE FLASH MESSAGES
+// =============================================
 export const FlashMessage: React.FC<{
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
@@ -86,7 +102,9 @@ export const FlashMessage: React.FC<{
   );
 };
 
-// ✅ Componente de resultado de guardado
+// =============================================
+// 💾 COMPONENTE DE RESULTADO DE GUARDADO
+// =============================================
 export const ResultadoGuardado: React.FC<{
   resultado: ResultadoGuardado;
   onCerrar: () => void;
@@ -103,12 +121,12 @@ export const ResultadoGuardado: React.FC<{
               <Save className="h-6 w-6 text-green-600" />
               Guardado Completado
             </h3>
-            <Button
+            <button
               onClick={onCerrar}
               className="text-gray-400 hover:text-gray-600"
             >
               <X className="h-5 w-5" />
-            </Button>
+            </button>
           </div>
 
           {/* Resumen principal */}
@@ -211,7 +229,120 @@ export const ResultadoGuardado: React.FC<{
   );
 };
 
-// ✅ COMPONENTE de exportación
+// =============================================
+// 📊 ESTADÍSTICAS AVANZADAS
+// =============================================
+export const EstadisticasAvanzadas: React.FC<{
+  estadisticas: EstadisticasLibros;
+}> = ({ estadisticas }) => {
+  return (
+    <div className="sticky top-0 z-10 bg-white">
+      <div className="rounded-lg border bg-white p-6 shadow-sm">
+        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+          <BarChart3 className="h-5 w-5" />
+          Estadísticas Detalladas
+        </h3>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+          <div className="rounded-lg bg-blue-50 p-3">
+            <div className="text-2xl font-bold text-blue-800">{estadisticas.total}</div>
+            <div className="text-sm text-blue-600">Total libros</div>
+          </div>
+          <div className="rounded-lg bg-green-50 p-3">
+            <div className="text-2xl font-bold text-green-800">
+              {estadisticas.procesados}
+              <span className="ml-1 text-sm">({estadisticas.porcentajeProcesados}%)</span>
+            </div>
+            <div className="text-sm text-green-600">Procesados</div>
+          </div>
+          {estadisticas.errores > 0 && (
+            <div className="rounded-lg bg-red-50 p-3">
+              <div className="text-2xl font-bold text-red-800">
+                {estadisticas.errores}
+                <span className="ml-1 text-sm">({estadisticas.porcentajeErrores}%)</span>
+              </div>
+              <div className="text-sm text-red-600">Con errores</div>
+            </div>
+          )}
+          <div className="rounded-lg bg-emerald-50 p-3">
+            <div className="text-xl font-bold text-emerald-800">${estadisticas.valorTotal.toFixed(2)}</div>
+            <div className="text-sm text-emerald-600">Valor total</div>
+          </div>
+          <div className="rounded-lg bg-orange-50 p-3">
+            <div className="text-2xl font-bold text-orange-800">{estadisticas.cantidadTotal}</div>
+            <div className="text-sm text-orange-600">Unidades</div>
+          </div>
+          <div className="rounded-lg bg-purple-50 p-3">
+            <div className="text-2xl font-bold text-purple-800">
+              {estadisticas.conImagenes}
+              <span className="ml-1 text-sm">({estadisticas.porcentajeConImagenes}%)</span>
+            </div>
+            <div className="text-sm text-purple-600">Con imagen</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =============================================
+// 🔄 PROGRESO DE BÚSQUEDA
+// =============================================
+export const ProgresoBusqueda: React.FC<{
+  progreso: { actual: number; total: number };
+}> = ({ progreso }) => {
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+      <div className="flex items-center gap-3">
+        <Loader className="h-5 w-5 animate-spin text-blue-600" />
+        <div className="flex-1">
+          <p className="text-sm font-medium text-blue-800">
+            Consultando base de datos... {progreso.actual}/{progreso.total}
+          </p>
+          <div className="mt-2 h-2 w-full rounded-full bg-blue-200">
+            <div
+              className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+              style={{ width: `${(progreso.actual / progreso.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =============================================
+// 📈 ESTADÍSTICAS DE BÚSQUEDA
+// =============================================
+export const EstadisticasBusqueda: React.FC<{
+  estadisticas: EstadisticasBusqueda;
+}> = ({ estadisticas }) => {
+  return (
+    <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+      <div className="flex items-center gap-3">
+        <Database className="h-5 w-5 text-green-600" />
+        <div className="flex-1">
+          <p className="text-sm font-medium text-green-800">
+            Procesamiento completado: {estadisticas.encontrados}/{estadisticas.total} libros encontrados (
+            {Math.round((estadisticas.encontrados / estadisticas.total) * 100)}% éxito)
+          </p>
+
+          {estadisticas.isbnsOriginales.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs text-green-600 hover:text-green-800">
+                Ver ISBNs procesados ({estadisticas.isbnsOriginales.length})
+              </summary>
+              <p className="mt-1 font-mono text-xs text-green-600">{estadisticas.isbnsOriginales.join(', ')}</p>
+            </details>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =============================================
+// 📥 EXPORTADOR DE LIBROS
+// =============================================
 export const ExportadorLibros: React.FC<{
   libros: LibroCompleto[];
   estadisticas: EstadisticasLibros;
@@ -302,7 +433,9 @@ export const ExportadorLibros: React.FC<{
   );
 };
 
-// ✅ Hook para estadísticas
+// =============================================
+// 📊 HOOK PARA ESTADÍSTICAS
+// =============================================
 export const useEstadisticasLibros = (libros: LibroCompleto[]): EstadisticasLibros => {
   return React.useMemo(() => {
     const stats: EstadisticasLibros = {
@@ -355,7 +488,9 @@ export const useEstadisticasLibros = (libros: LibroCompleto[]): EstadisticasLibr
   }, [libros]);
 };
 
-// ✅ Utilidades para procesamiento de XML
+// =============================================
+// 🛠️ UTILIDADES PARA PROCESAMIENTO DE XML
+// =============================================
 export const extraerTituloYAutor = (descripcion: string): { titulo: string; autor?: string } => {
   const patrones = [
     /^LIBRO:\s*(.+?)\s*-\s*(.+)$/i,
