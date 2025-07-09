@@ -87,7 +87,7 @@ Route::middleware(['auth', 'check.user.active'])
 
         // En routes/web.php o routes/api.php
 
-Route::get('/api/books/estadisticas-post-guardado', [BookController::class, 'estadisticasPostGuardado']);
+        Route::get('/api/books/estadisticas-post-guardado', [BookController::class, 'estadisticasPostGuardado']);
         // 🆕 NUEVAS RUTAS para DatabaseSearchService
         Route::prefix('libros')->group(function () {
             // ✅ Cambiar a GET y usar método correcto
@@ -102,56 +102,45 @@ Route::get('/api/books/estadisticas-post-guardado', [BookController::class, 'est
             Route::get('/estadisticas', [BookController::class, 'estadisticas']);
         });
 
- /*        // ✅ Mantener ruta antigua si otros lugares la usan
+        /*        // ✅ Mantener ruta antigua si otros lugares la usan
         Route::post('/buscar-isbn', [BookController::class, 'buscarPorISBN'])
             ->name('buscar-isbn-old'); // Darle nombre diferente */
     });
 
-  Route::prefix('admin/api')->group(function () {
+// ============================================
+// 🔧 SECCIÓN CORREGIDA - Admin API (SIN DUPLICADOS)
+// ============================================
 
-        // Editoriales
-        Route::get('/editoriales', [EditorialController::class, 'list'])
-            ->name('api.editoriales.list');
-        Route::get('/editoriales/search', [EditorialController::class, 'search'])
-            ->name('api.editoriales.search');
-        Route::post('/editoriales', [EditorialController::class, 'store'])
-            ->name('api.editoriales.store');
-
-        // Etiquetas/Categorías
-        Route::get('/etiquetas', [EtiquetaController::class, 'list'])
-            ->name('api.etiquetas.list');
-        Route::get('/etiquetas/search', [EtiquetaController::class, 'search'])
-            ->name('api.etiquetas.search');
-        Route::post('/etiquetas', [EtiquetaController::class, 'store'])
-            ->name('api.etiquetas.store');
-
-        // Autores
-        Route::get('/autores', [AutorController::class, 'list'])
-            ->name('api.autores.list');
-        Route::get('/autores/search', [AutorController::class, 'search'])
-            ->name('api.autores.search');
-        Route::post('/autores', [AutorController::class, 'store'])
-            ->name('api.autores.store');
-
-        // Upload de archivos
-        Route::post('/upload/imagen', [UploadController::class, 'imagen'])
-            ->name('api.upload.imagen');
-        Route::delete('/upload/imagen', [UploadController::class, 'eliminarImagen'])
-            ->name('api.upload.eliminar');
-    });
-
-// En routes/web.php
+// ✅ ÚNICA DEFINICIÓN - Admin API con middleware correcto
 Route::middleware(['auth', 'verified'])->prefix('admin/api')->group(function () {
-    Route::get('/editoriales', [EditorialController::class, 'list']);
-    Route::get('/etiquetas', [EtiquetaController::class, 'list']);
-    Route::get('/autores', [AutorController::class, 'list']);
 
-    Route::post('/upload/imagen', [UploadController::class, 'imagen']);
+    Route::get('/editoriales', [EditorialController::class, 'list'])
+        ->name('api.editoriales.list');
+    Route::get('/editoriales/search', [EditorialController::class, 'search'])
+        ->name('api.editoriales.search');
+    Route::post('/editoriales', [EditorialController::class, 'store'])
+        ->name('api.editoriales.store');
+
+    Route::get('/etiquetas', [EtiquetaController::class, 'list'])
+        ->name('api.etiquetas.list');
+    Route::get('/etiquetas/search', [EtiquetaController::class, 'search'])
+        ->name('api.etiquetas.search');
+    Route::post('/etiquetas', [EtiquetaController::class, 'store'])
+        ->name('api.etiquetas.store');
+
+    Route::get('/autores', [AutorController::class, 'list'])
+        ->name('api.autores.list');
+    Route::get('/autores/search', [AutorController::class, 'search'])
+        ->name('api.autores.search');
+    Route::post('/autores', [AutorController::class, 'store'])
+        ->name('api.autores.store');
+
+    Route::post('/upload/imagen', [UploadController::class, 'imagen'])
+        ->name('api.upload.imagen');
+    Route::delete('/upload/imagen', [UploadController::class, 'eliminarImagen'])
+        ->name('api.upload.eliminar');
 });
 
-
-
-// Rutas de Facturas de Libros
 Route::prefix('facturas-libros')->group(function () {
     Route::post('/procesar', [FacturaLibrosController::class, 'procesarFacturaCompleta'])->name('facturas.procesar');
     Route::get('/buscar', [FacturaLibrosController::class, 'buscarFacturas'])->name('facturas.buscar');
@@ -163,11 +152,25 @@ Route::prefix('facturas-libros')->group(function () {
 
 
 
-
-
-
-
-
+Route::get('/storage/{path}', function ($path) {
+    $fullPath = storage_path('app/public/' . $path);
+    
+    // Verificar que el archivo existe
+    if (!file_exists($fullPath)) {
+        abort(404, 'Archivo no encontrado');
+    }
+    
+    // Verificar que está dentro del directorio permitido (seguridad)
+    $realPath = realpath($fullPath);
+    $allowedPath = realpath(storage_path('app/public'));
+    
+    if (!str_starts_with($realPath, $allowedPath)) {
+        abort(403, 'Acceso denegado');
+    }
+    
+    // Servir el archivo con el tipo MIME correcto
+    return response()->file($fullPath);
+})->where('path', '.*')->name('storage.serve');
 
 
 

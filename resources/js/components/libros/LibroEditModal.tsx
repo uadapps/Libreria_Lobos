@@ -62,245 +62,248 @@ const SelectConBusqueda = React.memo<{
     allowNew?: boolean;
     displayField?: string;
     apiEndpoint?: string;
-}>(({
-    value,
-    onChange,
-    options,
-    placeholder,
-    className = '',
-    disabled = false,
-    isError = false,
-    allowNew = true,
-    displayField = 'nombre',
-    apiEndpoint = '',
-}) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filteredOptions, setFilteredOptions] = useState(options);
-    const [isSearching, setIsSearching] = useState(false);
-    const localDropdownRef = useRef<HTMLDivElement>(null);
+}>(
+    ({
+        value,
+        onChange,
+        options,
+        placeholder,
+        className = '',
+        disabled = false,
+        isError = false,
+        allowNew = true,
+        displayField = 'nombre',
+        apiEndpoint = '',
+    }) => {
+        const [isOpen, setIsOpen] = useState(false);
+        const [searchTerm, setSearchTerm] = useState('');
+        const [filteredOptions, setFilteredOptions] = useState(options);
+        const [isSearching, setIsSearching] = useState(false);
+        const localDropdownRef = useRef<HTMLDivElement>(null);
 
-    // Inicializar opciones filtradas
-    useEffect(() => {
-        setFilteredOptions(options);
-    }, [options]);
+        // Inicializar opciones filtradas
+        useEffect(() => {
+            setFilteredOptions(options);
+        }, [options]);
 
-    // Memoizar las opciones filtradas para evitar recálculos
-    const memoizedFilteredOptions = useMemo(() => {
-        if (!searchTerm.trim()) {
-            return options.slice(0, 20);
-        }
+        // Memoizar las opciones filtradas para evitar recálculos
+        const memoizedFilteredOptions = useMemo(() => {
+            if (!searchTerm.trim()) {
+                return options.slice(0, 20);
+            }
 
-        const filtered = options.filter(
-            (option) =>
-                option.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (option.nombre_completo && option.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase())),
-        );
-        return filtered.slice(0, 20);
-    }, [searchTerm, options]);
+            const filtered = options.filter(
+                (option) =>
+                    option.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (option.nombre_completo && option.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase())),
+            );
+            return filtered.slice(0, 20);
+        }, [searchTerm, options]);
 
-    // Actualizar opciones filtradas
-    useEffect(() => {
-        if (!apiEndpoint) {
-            setFilteredOptions(memoizedFilteredOptions);
-        }
-    }, [memoizedFilteredOptions, apiEndpoint]);
-
-    // Búsqueda en servidor con debounce
-    useEffect(() => {
-        if (!searchTerm.trim() || !apiEndpoint) {
+        // Actualizar opciones filtradas
+        useEffect(() => {
             if (!apiEndpoint) {
                 setFilteredOptions(memoizedFilteredOptions);
             }
-            return;
-        }
+        }, [memoizedFilteredOptions, apiEndpoint]);
 
-        const timeoutId = setTimeout(async () => {
-            setIsSearching(true);
-            try {
-                const response = await fetch(`${apiEndpoint}?search=${encodeURIComponent(searchTerm)}`);
-                const data = await response.json();
-                const results = data.autores || data.editoriales || data.etiquetas || data.categorias || [];
-                setFilteredOptions(results);
-            } catch (error) {
-                console.error('Error en búsqueda:', error);
-                setFilteredOptions(memoizedFilteredOptions);
-            } finally {
-                setIsSearching(false);
+        // Búsqueda en servidor con debounce
+        useEffect(() => {
+            if (!searchTerm.trim() || !apiEndpoint) {
+                if (!apiEndpoint) {
+                    setFilteredOptions(memoizedFilteredOptions);
+                }
+                return;
             }
-        }, 300);
 
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, apiEndpoint, memoizedFilteredOptions]);
+            const timeoutId = setTimeout(async () => {
+                setIsSearching(true);
+                try {
+                    const response = await fetch(`${apiEndpoint}?search=${encodeURIComponent(searchTerm)}`);
+                    const data = await response.json();
+                    const results = data.autores || data.editoriales || data.etiquetas || data.categorias || [];
+                    setFilteredOptions(results);
+                } catch (error) {
+                    console.error('Error en búsqueda:', error);
+                    setFilteredOptions(memoizedFilteredOptions);
+                } finally {
+                    setIsSearching(false);
+                }
+            }, 300);
 
-    // Verificar si debe mostrar la opción "Crear nuevo"
-    const shouldShowCreateNew = useMemo(() => {
-        if (!allowNew || !searchTerm.trim()) return false;
+            return () => clearTimeout(timeoutId);
+        }, [searchTerm, apiEndpoint, memoizedFilteredOptions]);
 
-        // No mostrar si ya existe exactamente
-        const exactMatch = filteredOptions.some(option =>
-            option.nombre.toLowerCase() === searchTerm.toLowerCase()
+        // Verificar si debe mostrar la opción "Crear nuevo"
+        const shouldShowCreateNew = useMemo(() => {
+            if (!allowNew || !searchTerm.trim()) return false;
+
+            // No mostrar si ya existe exactamente
+            const exactMatch = filteredOptions.some((option) => option.nombre.toLowerCase() === searchTerm.toLowerCase());
+
+            return !exactMatch;
+        }, [allowNew, searchTerm, filteredOptions]);
+
+        // Cerrar dropdown al hacer click fuera
+        useEffect(() => {
+            const handleClickOutside = (event: MouseEvent) => {
+                if (localDropdownRef.current && !localDropdownRef.current.contains(event.target as Node)) {
+                    setIsOpen(false);
+                    setSearchTerm('');
+                }
+            };
+
+            if (isOpen) {
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }
+        }, [isOpen]);
+
+        // Memoizar el valor mostrado
+        const displayValue = useMemo(() => {
+            const selectedOption = options.find((opt) => opt.nombre === value);
+            return selectedOption
+                ? displayField === 'nombre_completo' && selectedOption.nombre_completo
+                    ? selectedOption.nombre_completo
+                    : selectedOption.nombre
+                : value;
+        }, [value, options, displayField]);
+
+        // Handlers memoizados
+        const handleInputChange = useCallback(
+            (e: React.ChangeEvent<HTMLInputElement>) => {
+                setSearchTerm(e.target.value);
+                if (!isOpen) setIsOpen(true);
+            },
+            [isOpen],
         );
 
-        return !exactMatch;
-    }, [allowNew, searchTerm, filteredOptions]);
+        const handleInputFocus = useCallback(() => {
+            setIsOpen(true);
+            setSearchTerm('');
+        }, []);
 
-    // Cerrar dropdown al hacer click fuera
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (localDropdownRef.current && !localDropdownRef.current.contains(event.target as Node)) {
+        const handleOptionClick = useCallback(
+            (optionNombre: string) => {
+                onChange(optionNombre);
                 setIsOpen(false);
                 setSearchTerm('');
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
-        }
-    }, [isOpen]);
-
-    // Memoizar el valor mostrado
-    const displayValue = useMemo(() => {
-        const selectedOption = options.find((opt) => opt.nombre === value);
-        return selectedOption
-            ? displayField === 'nombre_completo' && selectedOption.nombre_completo
-                ? selectedOption.nombre_completo
-                : selectedOption.nombre
-            : value;
-    }, [value, options, displayField]);
-
-    // Handlers memoizados
-    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(e.target.value);
-        if (!isOpen) setIsOpen(true);
-    }, [isOpen]);
-
-    const handleInputFocus = useCallback(() => {
-        setIsOpen(true);
-        setSearchTerm('');
-    }, []);
-
-    const handleOptionClick = useCallback((optionNombre: string) => {
-        onChange(optionNombre);
-        setIsOpen(false);
-        setSearchTerm('');
-    }, [onChange]);
-
-    const handleClearClick = useCallback(() => {
-        onChange('');
-        setSearchTerm('');
-        setIsOpen(false);
-    }, [onChange]);
-
-    const handleToggleDropdown = useCallback(() => {
-        setIsOpen(!isOpen);
-    }, [isOpen]);
-
-    const handleCreateNew = useCallback(() => {
-        console.log('Creando nuevo:', searchTerm); // Debug
-        onChange(searchTerm);
-        setIsOpen(false);
-        setSearchTerm('');
-    }, [onChange, searchTerm]);
-
-    if (disabled) {
-        return (
-            <input
-                type="text"
-                value={displayValue}
-                className={`w-full rounded-lg border bg-gray-100 px-3 py-2 text-sm dark:border-gray-500 dark:bg-gray-600 dark:text-white ${
-                    isError ? 'border-red-500' : 'border-gray-300 dark:border-gray-500'
-                } ${className}`}
-                disabled
-            />
+            },
+            [onChange],
         );
-    }
 
-    return (
-        <div className="relative" ref={localDropdownRef}>
-            {/* Input principal */}
-            <div className="relative">
+        const handleClearClick = useCallback(() => {
+            onChange('');
+            setSearchTerm('');
+            setIsOpen(false);
+        }, [onChange]);
+
+        const handleToggleDropdown = useCallback(() => {
+            setIsOpen(!isOpen);
+        }, [isOpen]);
+
+        const handleCreateNew = useCallback(() => {
+            console.log('Creando nuevo:', searchTerm); // Debug
+            onChange(searchTerm);
+            setIsOpen(false);
+            setSearchTerm('');
+        }, [onChange, searchTerm]);
+
+        if (disabled) {
+            return (
                 <input
                     type="text"
-                    value={isOpen ? searchTerm : displayValue}
-                    onChange={handleInputChange}
-                    onFocus={handleInputFocus}
-                    className={`w-full rounded-lg border px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-gray-500 dark:border-gray-500 dark:bg-gray-600 dark:text-white ${
+                    value={displayValue}
+                    className={`w-full rounded-lg border bg-gray-100 px-3 py-2 text-sm dark:border-gray-500 dark:bg-gray-600 dark:text-white ${
                         isError ? 'border-red-500' : 'border-gray-300 dark:border-gray-500'
                     } ${className}`}
-                    placeholder={isOpen ? 'Buscar...' : placeholder}
+                    disabled
                 />
+            );
+        }
 
-                {/* Indicador de búsqueda/dropdown */}
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    {isSearching ? (
-                        <Loader className="h-4 w-4 animate-spin text-gray-400" />
-                    ) : (
-                        <button type="button" onClick={handleToggleDropdown} className="text-gray-400 hover:text-gray-600">
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
+        return (
+            <div className="relative" ref={localDropdownRef}>
+                {/* Input principal */}
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={isOpen ? searchTerm : displayValue}
+                        onChange={handleInputChange}
+                        onFocus={handleInputFocus}
+                        className={`w-full rounded-lg border px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-gray-500 dark:border-gray-500 dark:bg-gray-600 dark:text-white ${
+                            isError ? 'border-red-500' : 'border-gray-300 dark:border-gray-500'
+                        } ${className}`}
+                        placeholder={isOpen ? 'Buscar...' : placeholder}
+                    />
+
+                    {/* Indicador de búsqueda/dropdown */}
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                        {isSearching ? (
+                            <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                        ) : (
+                            <button type="button" onClick={handleToggleDropdown} className="text-gray-400 hover:text-gray-600">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Botón X para limpiar */}
+                    {value && (
+                        <button
+                            type="button"
+                            onClick={handleClearClick}
+                            className="absolute inset-y-0 right-8 flex items-center pr-1 text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="h-4 w-4" />
                         </button>
                     )}
                 </div>
 
-                {/* Botón X para limpiar */}
-                {value && (
-                    <button
-                        type="button"
-                        onClick={handleClearClick}
-                        className="absolute inset-y-0 right-8 flex items-center pr-1 text-gray-400 hover:text-gray-600"
-                    >
-                        <X className="h-4 w-4" />
-                    </button>
+                {/* Dropdown de opciones */}
+                {isOpen && (
+                    <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700">
+                        {/* Opciones filtradas */}
+                        {filteredOptions.length > 0 &&
+                            filteredOptions.map((option) => (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => handleOptionClick(option.nombre)}
+                                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600"
+                                >
+                                    {displayField === 'nombre_completo' && option.nombre_completo ? option.nombre_completo : option.nombre}
+                                </button>
+                            ))}
+
+                        {/* Mensaje cuando no hay resultados Y no se puede crear nuevo */}
+                        {filteredOptions.length === 0 && !shouldShowCreateNew && (
+                            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                {searchTerm ? 'No se encontraron resultados' : 'Escribe para buscar...'}
+                            </div>
+                        )}
+
+                        {/* Opción de crear nuevo */}
+                        {shouldShowCreateNew && (
+                            <>
+                                {filteredOptions.length > 0 && <div className="border-t border-gray-200 dark:border-gray-600"></div>}
+                                <button
+                                    type="button"
+                                    onClick={handleCreateNew}
+                                    className="w-full px-3 py-2 text-left text-sm font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                                >
+                                    ➕ Crear "{searchTerm}"
+                                </button>
+                            </>
+                        )}
+                    </div>
                 )}
             </div>
-
-            {/* Dropdown de opciones */}
-            {isOpen && (
-                <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700">
-                    {/* Opciones filtradas */}
-                    {filteredOptions.length > 0 && (
-                        filteredOptions.map((option) => (
-                            <button
-                                key={option.id}
-                                type="button"
-                                onClick={() => handleOptionClick(option.nombre)}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:text-white dark:hover:bg-gray-600"
-                            >
-                                {displayField === 'nombre_completo' && option.nombre_completo ? option.nombre_completo : option.nombre}
-                            </button>
-                        ))
-                    )}
-
-                    {/* Mensaje cuando no hay resultados Y no se puede crear nuevo */}
-                    {filteredOptions.length === 0 && !shouldShowCreateNew && (
-                        <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                            {searchTerm ? 'No se encontraron resultados' : 'Escribe para buscar...'}
-                        </div>
-                    )}
-
-                    {/* Opción de crear nuevo */}
-                    {shouldShowCreateNew && (
-                        <>
-                            {filteredOptions.length > 0 && (
-                                <div className="border-t border-gray-200 dark:border-gray-600"></div>
-                            )}
-                            <button
-                                type="button"
-                                onClick={handleCreateNew}
-                                className="w-full px-3 py-2 text-left text-sm font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                            >
-                                ➕ Crear "{searchTerm}"
-                            </button>
-                        </>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-});
+        );
+    },
+);
 
 SelectConBusqueda.displayName = 'SelectConBusqueda';
 
@@ -492,7 +495,7 @@ const LibroEditModal: React.FC<LibroEditModalProps> = ({
                         setEditoriales([]);
                     }
                 } catch (error) {
-                   /*  setEditoriales([
+                    /*  setEditoriales([
                         { id: 1, nombre: 'Penguin Random House', contacto: 'contacto@penguin.com' },
                         { id: 2, nombre: 'Planeta', contacto: 'info@planeta.com' },
                         { id: 3, nombre: 'Santillana', contacto: 'ventas@santillana.com' },
@@ -563,43 +566,113 @@ const LibroEditModal: React.FC<LibroEditModalProps> = ({
         }
     };
 
-    // Subir imagen
-    const subirImagen = async (file: File) => {
-        if (!file) return;
+const subirImagen = async (file: File) => {
+    if (!file) return;
 
-        setSubiendoImagen(true);
-        try {
-            const formData = new FormData();
-            formData.append('imagen', file);
-            formData.append('tipo', 'libro');
+    console.log('🚀 Subiendo imagen:', file.name);
+    setSubiendoImagen(true);
+    
+    try {
+        const formData = new FormData();
+        formData.append('imagen', file);
+        formData.append('tipo', 'libro');
 
-            router.post('/admin/upload/imagen', formData, {
-                preserveState: true,
-                preserveScroll: true,
-                onSuccess: (page) => {
-                    const response = page.props.upload;
-                    if (response && response.success) {
-                        actualizarCampo('imagenUrl', response.path);
-                        setPreviewImagen(response.url || response.path);
-                    }
-                },
-                onError: (errors) => {
-                    console.error('Error subiendo imagen:', errors);
-                    const simulatedPath = `/storage/libros/${Date.now()}_${file.name}`;
-                    actualizarCampo('imagenUrl', simulatedPath);
-                    setPreviewImagen(URL.createObjectURL(file));
-                },
-                onFinish: () => {
-                    setSubiendoImagen(false);
-                },
-            });
-        } catch (error) {
-            console.error('Error subiendo imagen:', error);
-            setSubiendoImagen(false);
+        // ✅ USAR FETCH DIRECTO ya que el controlador devuelve JSON
+        const response = await fetch('/admin/api/upload/imagen', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'Accept': 'application/json',
+            }
+        });
+
+        console.log('📊 Response status:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Respuesta exitosa:', data);
+            
+            if (data.success && data.upload && data.upload.success) {
+                const uploadData = data.upload;
+                
+                console.log('🖼️ Datos de imagen:', {
+                    path: uploadData.path,
+                    url: uploadData.url,
+                    filename: uploadData.filename
+                });
+                
+                // ✅ ACTUALIZAR IMAGEN
+                actualizarCampo('imagenUrl', uploadData.path);
+                setPreviewImagen(uploadData.url);
+                
+                console.log('✅ ¡Imagen subida y configurada!');
+                
+                // Opcional: toast de éxito
+                // toast.success('Imagen subida exitosamente');
+                
+            } else {
+                console.error('❌ Respuesta no válida:', data);
+                // toast.error('Error en la respuesta del servidor');
+            }
+        } else {
+            const errorData = await response.json();
+            console.error('❌ Error del servidor:', errorData);
+            // toast.error(errorData.message || 'Error subiendo imagen');
         }
-    };
 
-    // Manejar categorías
+    } catch (error) {
+        console.error('💥 Error:', error);
+        // toast.error('Error procesando imagen');
+    } finally {
+        setSubiendoImagen(false);
+    }
+};
+// ============================================
+// 🔧 FUNCIÓN AUXILIAR: Verificar acceso a imagen
+// ============================================
+
+const verificarAccesoImagen = (url: string) => {
+    console.log('🔍 Verificando acceso a imagen:', url);
+    
+    const img = new Image();
+    img.onload = () => {
+        console.log('✅ Imagen accesible correctamente');
+       // toast.success('Imagen cargada correctamente');
+    };
+    img.onerror = () => {
+        console.error('❌ Imagen NO accesible');
+        
+        // ✅ Intentar URLs alternativas
+        const alternativeUrls = [
+            url.replace('/storage/', '/storage/app/public/'),
+            url.replace('/storage/', '/'),
+            '/storage/' + url.replace(/^\/+storage\/+/, ''),
+            window.location.origin + url
+        ];
+        
+        console.log('🔄 Intentando URLs alternativas:', alternativeUrls);
+        
+        alternativeUrls.forEach((altUrl, index) => {
+            const testImg = new Image();
+            testImg.onload = () => {
+                console.log(`✅ URL alternativa ${index + 1} funciona:`, altUrl);
+                // Actualizar con la URL que funciona
+                setPreviewImagen(altUrl);
+                actualizarCampo('imagenUrl', altUrl);
+            };
+            testImg.onerror = () => {
+                console.log(`❌ URL alternativa ${index + 1} falla:`, altUrl);
+            };
+            testImg.src = altUrl;
+        });
+        
+     //   toast.warning('Imagen subida pero hay problemas de acceso. Revisa la consola.');
+    };
+    img.src = url;
+};
+
+
     const agregarCategoria = useCallback(
         (categoria: string) => {
             if (!categoriasSeleccionadas.includes(categoria)) {
@@ -919,12 +992,14 @@ const LibroEditModal: React.FC<LibroEditModalProps> = ({
                                                     )}
 
                                                     {/* Indicador de valor personalizado para Editorial */}
-                                                    {formData.editorial?.nombre && Array.isArray(editoriales) && !editoriales.find(ed => ed.nombre === formData.editorial?.nombre) && (
-                                                        <div className="mt-1 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                                                            <Plus className="h-3 w-3" />
-                                                            Nuevo: {formData.editorial?.nombre}
-                                                        </div>
-                                                    )}
+                                                    {formData.editorial?.nombre &&
+                                                        Array.isArray(editoriales) &&
+                                                        !editoriales.find((ed) => ed.nombre === formData.editorial?.nombre) && (
+                                                            <div className="mt-1 flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                                                                <Plus className="h-3 w-3" />
+                                                                Nuevo: {formData.editorial?.nombre}
+                                                            </div>
+                                                        )}
                                                 </div>
 
                                                 <div>
@@ -973,8 +1048,8 @@ const LibroEditModal: React.FC<LibroEditModalProps> = ({
                                                     {errores.autorNombre && <p className="mt-1 text-xs text-red-600">{errores.autorNombre}</p>}
 
                                                     {/* Indicador de valor personalizado para Autor */}
-                                                    {formData.autor?.nombre && !autores.find(a => a.nombre === formData.autor?.nombre) && (
-                                                        <div className="mt-1 text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                                    {formData.autor?.nombre && !autores.find((a) => a.nombre === formData.autor?.nombre) && (
+                                                        <div className="mt-1 flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
                                                             <Plus className="h-3 w-3" />
                                                             Nuevo: {formData.autor?.nombre}
                                                         </div>
