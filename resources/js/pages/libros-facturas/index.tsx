@@ -1,9 +1,9 @@
 // ============================================
-// 📁 pages/libros-facturas/index.tsx - ÍNDICE PRINCIPAL REFACTORIZADO
+// 📁 pages/libros-facturas/index.tsx - SOLO FACTURAS
 // ============================================
 import { Button } from '@headlessui/react';
 import { Head } from '@inertiajs/react';
-import { BarChart3, File, Loader, Plus, Save, Trash2 } from 'lucide-react';
+import { BarChart3, Loader, Plus, Save, Trash2, File, Receipt } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -64,28 +64,20 @@ export default function LibrosFacturas() {
         cerrarResultadoGuardado,
         guardarLibrosEnInventario,
     } = useLibrosFacturas();
+    
+    // ✅ HOOK PARA AGREGAR LIBROS A LA FACTURA EXISTENTE
+    const { 
+        nuevoLibro, 
+        setNuevoLibro, 
+        agregarLibroManual, 
+        buscarPorISBNManual,
+        resetearFormulario,
+        resetearSoloLibro 
+    } = useLibroManual(setLibros, datosFactura, setBuscandoISBNs);
 
-       const stableSetLibros = useCallback((libros) => setLibros(libros), []);
-    const stableSetBuscandoISBNs = useCallback((value) => setBuscandoISBNs(value), []);
-
-    // 🔧 CAMBIAR ESTA LÍNEA:
-    const { nuevoLibro, setNuevoLibro, agregarLibroManual, buscarPorISBNManual } = useLibroManual(
-        stableSetLibros, 
-        datosFactura, 
-        stableSetBuscandoISBNs
-    );
- /*    // 🔧 AGREGAR:
-    const stableSetLibros = useCallback((libros) => setLibros(libros), []);
-    const stableSetBuscandoISBNs = useCallback((value) => setBuscandoISBNs(value), []);
- */
-    // 🔧 CAMBIAR:
-   /*  const { nuevoLibro, setNuevoLibro, agregarLibroManual, buscarPorISBNManual } = useLibroManual(
-        stableSetLibros,
-        datosFactura,
-        stableSetBuscandoISBNs,
-    ); */
     const { procesarFacturaXML } = useFacturaXMLProcessor();
     const { enriquecerLibrosConBaseDatos } = useEnriquecimientoBD(setLibros, setProgresoBusqueda, setEstadisticasBusqueda);
+    
     const handleProcesarFactura = useCallback(
         async (archivo: File) => {
             try {
@@ -130,13 +122,53 @@ export default function LibrosFacturas() {
         [buscarPorISBNManual],
     );
 
+    // ✅ FUNCIÓN PARA CAMBIAR FACTURA LIMPIANDO TODO
+    const handleCambiarFactura = useCallback(() => {
+        // Si hay libros, pedir confirmación
+        if (libros.length > 0) {
+            if (!confirm(`¿Está seguro de que desea cambiar la factura? Se perderán ${libros.length} libro(s) en la lista actual.`)) {
+                return;
+            }
+        }
+        
+        // Limpiar todo el estado de factura
+        limpiarFactura();
+        setDatosFactura(null);
+        setArchivoXML(null);
+        
+        // Limpiar formulario manual
+        resetearFormulario();
+        
+        // Limpiar libros si los hay
+        setLibros([]);
+        
+        // Volver al modo de selección de factura
+        setModoAgregar('factura');
+        
+        toast.info('🔄 Factura limpiada. Configure una nueva factura.', {
+            position: 'top-center',
+            autoClose: 3000,
+            theme: 'colored',
+        });
+    }, [libros.length, limpiarFactura, setDatosFactura, setArchivoXML, resetearFormulario, setLibros, setModoAgregar]);
+
+    // ✅ VERIFICAR SI HAY FACTURA CONFIGURADA
+    const tieneFacturaConfigurada = () => {
+        return !!(datosFactura || (
+            nuevoLibro.serieFactura && 
+            nuevoLibro.folioFactura && 
+            nuevoLibro.fechaFactura && 
+            nuevoLibro.editorial_nombre
+        ));
+    };
+
     // =============================================
     // 📊 BREADCRUMBS
     // =============================================
     const breadcrumbs: BreadcrumbItem[] = useMemo(
         () => [
             { title: 'Inventarios', href: '/libros-factura' },
-            { title: 'Agregar Libros', href: '/libros-factura' },
+            { title: 'Gestión de Facturas', href: '/libros-factura' },
         ],
         [],
     );
@@ -146,7 +178,7 @@ export default function LibrosFacturas() {
     // =============================================
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Agregar Libros - Sistema Inteligente" />
+            <Head title="Gestión de Facturas - Sistema Inteligente" />
 
             <div className="space-y-6 px-6 py-4">
                 {/* =============================================
@@ -155,9 +187,15 @@ export default function LibrosFacturas() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
-                            Gestión de Libros
+                            Gestión de Facturas e Inventario
                             {(buscandoISBNs || guardando) && <Loader className="h-6 w-6 animate-spin text-blue-600" />}
                         </h1>
+                        <p className="mt-1 text-sm text-gray-600">
+                            {!tieneFacturaConfigurada() 
+                                ? 'Procese una factura para comenzar a agregar libros al inventario'
+                                : 'Agregue libros a la factura configurada'
+                            }
+                        </p>
                     </div>
 
                     {/* Controles del header */}
@@ -174,12 +212,16 @@ export default function LibrosFacturas() {
                                     Estadísticas
                                 </button>
                                 <button
-                                    onClick={limpiarTodo}
+                                    onClick={() => {
+                                        if (confirm('¿Está seguro de que desea limpiar todo? Se perderán todos los libros y la configuración de factura.')) {
+                                            handleCambiarFactura();
+                                        }
+                                    }}
                                     className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-white transition-colors hover:bg-red-700"
                                     disabled={guardando}
                                 >
                                     <Trash2 className="h-4 w-4" />
-                                    Limpiar
+                                    Limpiar Todo
                                 </button>
                             </>
                         )}
@@ -216,38 +258,101 @@ export default function LibrosFacturas() {
                 {progresoBusqueda && <ProgresoBusqueda progreso={progresoBusqueda} />}
 
                 {/* =============================================
-        // 📝 SELECTOR DE MODO Y FORMULARIOS
+        // 📝 FLUJO PRINCIPAL - FACTURA PRIMERO
         // ============================================= */}
-                <div className="rounded-lg border bg-white p-6 shadow-sm">
-                    <div className="mb-6 flex gap-4">
-                        <button
-                            onClick={() => setModoAgregar('factura')}
-                            className={`flex items-center gap-2 rounded-lg px-4 py-2 transition-colors ${
-                                modoAgregar === 'factura'
-                                    ? 'border-2 border-blue-300 bg-blue-100 text-blue-700'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                            disabled={guardando}
-                        >
-                            <File size={18} />
-                            Desde Factura XML
-                        </button>
-                        <button
-                            onClick={() => setModoAgregar('manual')}
-                            className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors ${
-                                modoAgregar === 'manual'
-                                    ? 'border-2 border-green-300 bg-green-100 text-green-700'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                            disabled={guardando}
-                        >
-                            <Plus size={18} />
-                            Manual
-                        </button>
-                    </div>
+                
+                {!tieneFacturaConfigurada() ? (
+                    /* ✅ FASE 1: CONFIGURAR FACTURA */
+                    <div className="rounded-lg border bg-white p-6 shadow-sm">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                                <Receipt className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900">Configurar Factura</h2>
+                            <p className="mt-2 text-sm text-gray-600">
+                                Seleccione cómo desea configurar la factura para agregar libros al inventario
+                            </p>
+                        </div>
 
-                    {/* Modo Manual */}
-                    {modoAgregar === 'manual' && (
+                        <div className="mb-6 flex justify-center gap-4">
+                            <button
+                                onClick={() => setModoAgregar('factura')}
+                                className={`flex items-center gap-3 rounded-lg px-6 py-4 transition-colors ${
+                                    modoAgregar === 'factura'
+                                        ? 'border-2 border-blue-300 bg-blue-100 text-blue-700'
+                                        : 'border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                                disabled={guardando}
+                            >
+                                <File size={24} />
+                                <div className="text-left">
+                                    <div className="font-medium">Procesar Factura XML</div>
+                                    <div className="text-xs opacity-75">Cargar CFDI y extraer libros automáticamente</div>
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => setModoAgregar('manual')}
+                                className={`flex items-center gap-3 rounded-lg px-6 py-4 transition-colors ${
+                                    modoAgregar === 'manual'
+                                        ? 'border-2 border-green-300 bg-green-100 text-green-700'
+                                        : 'border-2 border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                                disabled={guardando}
+                            >
+                                <Receipt size={24} />
+                                <div className="text-left">
+                                    <div className="font-medium">Crear Factura Manual</div>
+                                    <div className="text-xs opacity-75">Configurar datos de factura manualmente</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Modo Factura XML */}
+                        {modoAgregar === 'factura' && (
+                            <FacturaXMLUploader
+                                archivoXML={archivoXML}
+                                setArchivoXML={setArchivoXML}
+                                datosFactura={datosFactura}
+                                buscandoISBNs={buscandoISBNs}
+                                guardando={guardando}
+                                onProcesarFactura={handleProcesarFactura}
+                                onLimpiarFactura={limpiarFactura}
+                            />
+                        )}
+
+                        {/* Modo Factura Manual */}
+                        {modoAgregar === 'manual' && (
+                            <LibroManualForm
+                                nuevoLibro={nuevoLibro}
+                                setNuevoLibro={setNuevoLibro}
+                                guardando={guardando}
+                                onAgregarLibro={agregarLibroManual}
+                                onBuscarISBN={handleBuscarISBN}
+                                buscandoISBNs={buscandoISBNs}
+                                datosFactura={datosFactura}
+                            />
+                        )}
+                    </div>
+                ) : (
+                    /* ✅ FASE 2: AGREGAR LIBROS A FACTURA EXISTENTE */
+                    <div className="rounded-lg border bg-white p-6 shadow-sm">
+                        <div className="mb-6 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">Agregar Libros a la Factura</h2>
+                                <p className="mt-1 text-sm text-gray-600">
+                                    Agregue libros individuales a la factura configurada
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleCambiarFactura}
+                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
+                                disabled={guardando}
+                            >
+                                <Receipt className="h-4 w-4" />
+                                Cambiar Factura
+                            </button>
+                        </div>
+
                         <LibroManualForm
                             nuevoLibro={nuevoLibro}
                             setNuevoLibro={setNuevoLibro}
@@ -257,21 +362,8 @@ export default function LibrosFacturas() {
                             buscandoISBNs={buscandoISBNs}
                             datosFactura={datosFactura}
                         />
-                    )}
-
-                    {/* Modo Factura XML */}
-                    {modoAgregar === 'factura' && (
-                        <FacturaXMLUploader
-                            archivoXML={archivoXML}
-                            setArchivoXML={setArchivoXML}
-                            datosFactura={datosFactura}
-                            buscandoISBNs={buscandoISBNs}
-                            guardando={guardando}
-                            onProcesarFactura={handleProcesarFactura}
-                            onLimpiarFactura={limpiarFactura}
-                        />
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* =============================================
         // 📚 VISTA DE LIBROS
@@ -306,6 +398,7 @@ export default function LibrosFacturas() {
                         </div>
                     </>
                 )}
+                
                 {resultadoGuardado && (
                     <ResultadoGuardado
                         resultado={resultadoGuardado}
