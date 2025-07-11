@@ -1,5 +1,5 @@
 // ============================================
-// 📁 pages/libros-facturas/index.tsx - SOLO FACTURAS
+// 📁 pages/libros-facturas/index.tsx - SIN DUPLICADOS
 // ============================================
 import { Button } from '@headlessui/react';
 import { Head } from '@inertiajs/react';
@@ -65,14 +65,32 @@ export default function LibrosFacturas() {
         guardarLibrosEnInventario,
     } = useLibrosFacturas();
     
-    // ✅ HOOK PARA AGREGAR LIBROS A LA FACTURA EXISTENTE
+    // ✅ HOOK COMPLETO PARA MANEJAR FORMULARIO MANUAL
     const { 
         nuevoLibro, 
         setNuevoLibro, 
+        pasoActual,
+        setPasoActual,
+        pasoCompletado,
+        setPasoCompletado,
+        etiquetasSeleccionadas,
+        setEtiquetasSeleccionadas,
+        isEditorialNueva,
+        setIsEditorialNueva,
+        isAutorNuevo,
+        setIsAutorNuevo,
+        isGeneroNuevo,
+        setIsGeneroNuevo,
+        validarPaso,
+        avanzarPaso,
+        retrocederPaso,
+        irAPaso,
         agregarLibroManual, 
         buscarPorISBNManual,
         resetearFormulario,
-        resetearSoloLibro 
+        resetearSoloLibro,
+        resetearCompleto, // ✅ NUEVA función para cambio de factura
+        prellenarDatosDesdeFactura,
     } = useLibroManual(setLibros, datosFactura, setBuscandoISBNs);
 
     const { procesarFacturaXML } = useFacturaXMLProcessor();
@@ -97,6 +115,7 @@ export default function LibrosFacturas() {
                     position: 'top-center',
                     autoClose: 7000,
                     theme: 'colored',
+                    toastId: 'error-procesar-xml',
                 });
             }
         },
@@ -122,7 +141,7 @@ export default function LibrosFacturas() {
         [buscarPorISBNManual],
     );
 
-    // ✅ FUNCIÓN PARA CAMBIAR FACTURA LIMPIANDO TODO
+    // ✅ FUNCIÓN PARA CAMBIAR FACTURA CON RESETEO COMPLETO
     const handleCambiarFactura = useCallback(() => {
         // Si hay libros, pedir confirmación
         if (libros.length > 0) {
@@ -131,26 +150,28 @@ export default function LibrosFacturas() {
             }
         }
         
-        // Limpiar todo el estado de factura
+        // ✅ LLAMAR AL HOOK para limpiar factura (ya maneja el toast)
         limpiarFactura();
+        
+        // ✅ LIMPIAR ESTADOS ADICIONALES SIN TOAST
         setDatosFactura(null);
         setArchivoXML(null);
-        
-        // Limpiar formulario manual
-        resetearFormulario();
-        
-        // Limpiar libros si los hay
         setLibros([]);
-        
-        // Volver al modo de selección de factura
         setModoAgregar('factura');
         
-        toast.info('🔄 Factura limpiada. Configure una nueva factura.', {
-            position: 'top-center',
-            autoClose: 3000,
-            theme: 'colored',
-        });
-    }, [libros.length, limpiarFactura, setDatosFactura, setArchivoXML, resetearFormulario, setLibros, setModoAgregar]);
+        // ✅ RESETEAR FORMULARIO MANUAL COMPLETAMENTE
+        resetearCompleto();
+        
+        // ❌ NO agregar toast aquí - ya lo maneja limpiarFactura()
+    }, [libros.length, limpiarFactura, setDatosFactura, setArchivoXML, setLibros, setModoAgregar, resetearCompleto]);
+
+    // ✅ FUNCIÓN LIMPIAR TODO SIN DUPLICADO  
+    const handleLimpiarTodo = useCallback(() => {
+        if (confirm('¿Está seguro de que desea limpiar todo? Se perderán todos los libros y la configuración de factura.')) {
+            // ✅ USAR LA FUNCIÓN DEL HOOK que ya maneja el toast
+            limpiarTodo();
+        }
+    }, [limpiarTodo]);
 
     // ✅ VERIFICAR SI HAY FACTURA CONFIGURADA
     const tieneFacturaConfigurada = () => {
@@ -212,11 +233,7 @@ export default function LibrosFacturas() {
                                     Estadísticas
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        if (confirm('¿Está seguro de que desea limpiar todo? Se perderán todos los libros y la configuración de factura.')) {
-                                            handleCambiarFactura();
-                                        }
-                                    }}
+                                    onClick={handleLimpiarTodo}
                                     className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-white transition-colors hover:bg-red-700"
                                     disabled={guardando}
                                 >
@@ -416,7 +433,20 @@ export default function LibrosFacturas() {
                     readonly={false}
                 />
             </div>
-            <ToastContainer position="top-center" autoClose={3000} theme="colored" />
+            
+            {/* ✅ UN SOLO TOAST CONTAINER */}
+            <ToastContainer 
+                position="top-center" 
+                autoClose={3000} 
+                theme="colored"
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                limit={3} // ✅ Limitar a máximo 3 toasts
+            />
         </AppLayout>
     );
 }

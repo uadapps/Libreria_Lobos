@@ -110,149 +110,147 @@ class FacturaLibrosController extends Controller
     /**
      * 🏢 OBTENER O CREAR PROVEEDOR POR RFC - MEJORADO
      */
-    private function obtenerOCrearProveedorPorRFC(string $rfc, ?array $proveedorInfo = null): object
-    {
-        $rfc = strtoupper(trim($rfc));
+private function obtenerOCrearProveedorPorRFC(string $rfc, ?array $proveedorInfo = null): object
+{
+    $rfc = strtoupper(trim($rfc));
 
-        // Buscar proveedor existente por RFC
-        $proveedor = DB::selectOne("
-            SELECT * FROM LB_proveedores WHERE rfc = ?
-        ", [$rfc]);
+    // Buscar proveedor existente por RFC
+    $proveedor = DB::selectOne("
+        SELECT * FROM LB_proveedores WHERE rfc = ?
+    ", [$rfc]);
 
-        if ($proveedor) {
-            Log::info("🏢 Proveedor encontrado por RFC", [
-                'id' => $proveedor->id,
-                'nombre' => $proveedor->nombre,
-                'rfc' => $proveedor->rfc
-            ]);
-
-            // Si tenemos nueva información del proveedor, actualizar
-            if ($proveedorInfo && !empty($proveedorInfo['nombre'])) {
-                $this->actualizarProveedorSiNecesario($proveedor->id, $proveedorInfo);
-                // Recargar proveedor actualizado
-                $proveedor = DB::selectOne("SELECT * FROM LB_proveedores WHERE id = ?", [$proveedor->id]);
-            }
-
-            return $proveedor;
-        }
-
-        // Crear nuevo proveedor
-        Log::info("➕ Creando nuevo proveedor para RFC: {$rfc}");
-
-        $datosProveedor = [
-            'nombre' => $proveedorInfo['nombre'] ?? "Proveedor {$rfc}",
-            'rfc' => $rfc,
-            'contacto' => $proveedorInfo['contacto'] ?? null,
-            'telefono' => $proveedorInfo['telefono'] ?? null,
-            'email' => $proveedorInfo['email'] ?? null,
-            'direccion' => $proveedorInfo['direccion'] ?? null,
-            'codigo_postal' => $proveedorInfo['codigo_postal'] ?? null,
-            'regimen_fiscal' => $proveedorInfo['regimen_fiscal'] ?? '601',
-            'activo' => 1,
-            'created_at' => now(),
-            'created_by' => auth()->id() ?? 1
-        ];
-
-        // Usar INSERT con OUTPUT para obtener el ID
-        $resultado = DB::select("
-            INSERT INTO LB_proveedores (
-                nombre, rfc, contacto, telefono, email, direccion, 
-                codigo_postal, regimen_fiscal, activo, created_at, created_by
-            ) OUTPUT INSERTED.* 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ", array_values($datosProveedor));
-
-        $nuevoProveedor = $resultado[0];
-
-        Log::info("✅ Proveedor creado", [
-            'id' => $nuevoProveedor->id,
-            'nombre' => $nuevoProveedor->nombre,
-            'rfc' => $nuevoProveedor->rfc
+    if ($proveedor) {
+        Log::info("🏢 Proveedor encontrado por RFC", [
+            'id' => $proveedor->id,
+            'nombre' => $proveedor->nombre,
+            'rfc' => $proveedor->rfc
         ]);
 
-        return $nuevoProveedor;
+        // Si tenemos nueva información del proveedor, actualizar
+        if ($proveedorInfo && !empty($proveedorInfo['nombre'])) {
+            $this->actualizarProveedorSiNecesario($proveedor->id, $proveedorInfo);
+            // Recargar proveedor actualizado
+            $proveedor = DB::selectOne("SELECT * FROM LB_proveedores WHERE id = ?", [$proveedor->id]);
+        }
+
+        return $proveedor;
     }
+
+    // Crear nuevo proveedor
+    Log::info("➕ Creando nuevo proveedor para RFC: {$rfc}");
+
+    // ✅ CORREGIDO: Usar parámetros individuales en lugar de array_values
+    $resultado = DB::select("
+        INSERT INTO LB_proveedores (
+            nombre, rfc, contacto, telefono, email, direccion, 
+            codigo_postal, regimen_fiscal, activo, created_at, created_by
+        ) OUTPUT INSERTED.* 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ", [
+        // ✅ Parámetros individuales correctamente ordenados
+        $proveedorInfo['nombre'] ?? "Proveedor {$rfc}",
+        $rfc,
+        $proveedorInfo['contacto'] ?? null,
+        $proveedorInfo['telefono'] ?? null,
+        $proveedorInfo['email'] ?? null,
+        $proveedorInfo['direccion'] ?? null,
+        $proveedorInfo['codigo_postal'] ?? null,
+        $proveedorInfo['regimen_fiscal'] ?? '601',
+        1, // activo
+        now(),
+        auth()->id() ?? 1
+    ]);
+
+    $nuevoProveedor = $resultado[0];
+
+    Log::info("✅ Proveedor creado", [
+        'id' => $nuevoProveedor->id,
+        'nombre' => $nuevoProveedor->nombre,
+        'rfc' => $nuevoProveedor->rfc
+    ]);
+
+    return $nuevoProveedor;
+}
 
     /**
      * 📄 OBTENER O CREAR FACTURA - MEJORADO
      */
-    private function obtenerOCrearFactura(array $facturaInfo, int $proveedorId): object
-    {
-        $serie = $facturaInfo['serie'] ?? '';
-        $folio = $facturaInfo['folio'];
-        $uuid = $facturaInfo['uuid_fiscal'] ?? null;
+private function obtenerOCrearFactura(array $facturaInfo, int $proveedorId): object
+{
+    $serie = $facturaInfo['serie'] ?? '';
+    $folio = $facturaInfo['folio'];
+    $uuid = $facturaInfo['uuid_fiscal'] ?? null;
 
-        // Buscar factura existente
-        $query = "SELECT * FROM LB_facturas_libros WHERE serie = ? AND folio = ?";
-        $params = [$serie, $folio];
+    // Buscar factura existente
+    $query = "SELECT * FROM LB_facturas_libros WHERE serie = ? AND folio = ?";
+    $params = [$serie, $folio];
 
-        if ($uuid) {
-            $query .= " AND uuid_fiscal = ?";
-            $params[] = $uuid;
-        }
-
-        $factura = DB::selectOne($query, $params);
-
-        if ($factura) {
-            Log::info("📄 Factura encontrada", [
-                'id' => $factura->id,
-                'serie_folio' => $serie . '-' . $folio
-            ]);
-
-            // Actualizar información si es necesario
-            $this->actualizarFacturaSiNecesario($factura->id, $facturaInfo, $proveedorId);
-
-            return DB::selectOne("SELECT * FROM LB_facturas_libros WHERE id = ?", [$factura->id]);
-        }
-
-        // Crear nueva factura
-        Log::info("➕ Creando nueva factura: {$serie}-{$folio}");
-
-        $datosFactura = [
-            'proveedor_id' => $proveedorId,
-            'serie' => $serie,
-            'folio' => $folio,
-            'numero_factura' => $serie . $folio,
-            'uuid_fiscal' => $uuid,
-            'fecha' => $facturaInfo['fecha'],
-            'fecha_timbrado' => $facturaInfo['fecha_timbrado'] ?? $facturaInfo['fecha'],
-            'subtotal' => $facturaInfo['subtotal'] ?? 0,
-            'descuento' => $facturaInfo['descuento'] ?? 0,
-            'impuestos' => $facturaInfo['impuestos'] ?? 0,
-            'total' => $facturaInfo['total'],
-            'moneda' => $facturaInfo['moneda'] ?? 'MXN',
-            'tipo_cambio' => $facturaInfo['tipo_cambio'] ?? 1,
-            'condiciones_pago' => $facturaInfo['condiciones_pago'] ?? 'CONTADO',
-            'metodo_pago' => $facturaInfo['metodo_pago'] ?? 'PPD',
-            'forma_pago' => $facturaInfo['forma_pago'] ?? '99',
-            'uso_cfdi' => $facturaInfo['uso_cfdi'] ?? 'G01',
-            'estado' => 'pagado',
-            'observaciones' => $facturaInfo['observaciones'] ?? null,
-            'created_at' => now(),
-            'created_by' => auth()->id() ?? 1
-        ];
-
-        $resultado = DB::select("
-            INSERT INTO LB_facturas_libros (
-                proveedor_id, serie, folio, numero_factura, uuid_fiscal,
-                fecha, fecha_timbrado, subtotal, descuento, impuestos, total,
-                moneda, tipo_cambio, condiciones_pago, metodo_pago, forma_pago,
-                uso_cfdi, estado, observaciones, created_at, created_by
-            ) OUTPUT INSERTED.*
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ", array_values($datosFactura));
-
-        $nuevaFactura = $resultado[0];
-
-        Log::info("✅ Factura creada", [
-            'id' => $nuevaFactura->id,
-            'serie_folio' => $serie . '-' . $folio,
-            'total' => $nuevaFactura->total
-        ]);
-
-        return $nuevaFactura;
+    if ($uuid) {
+        $query .= " AND uuid_fiscal = ?";
+        $params[] = $uuid;
     }
 
+    $factura = DB::selectOne($query, $params);
+
+    if ($factura) {
+        Log::info("📄 Factura encontrada", [
+            'id' => $factura->id,
+            'serie_folio' => $serie . '-' . $folio
+        ]);
+
+        // Actualizar información si es necesario
+        $this->actualizarFacturaSiNecesario($factura->id, $facturaInfo, $proveedorId);
+
+        return DB::selectOne("SELECT * FROM LB_facturas_libros WHERE id = ?", [$factura->id]);
+    }
+
+    // Crear nueva factura
+    Log::info("➕ Creando nueva factura: {$serie}-{$folio}");
+
+    // ✅ CORREGIDO: Usar parámetros individuales en lugar de array_values
+    $resultado = DB::select("
+        INSERT INTO LB_facturas_libros (
+            proveedor_id, serie, folio, numero_factura, uuid_fiscal,
+            fecha, fecha_timbrado, subtotal, descuento, impuestos, total,
+            moneda, tipo_cambio, condiciones_pago, metodo_pago, forma_pago,
+            uso_cfdi, estado, observaciones, created_at, created_by
+        ) OUTPUT INSERTED.*
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ", [
+        // ✅ Parámetros individuales correctamente ordenados
+        $proveedorId,
+        $serie,
+        $folio,
+        $serie . $folio, // numero_factura
+        $uuid,
+        $facturaInfo['fecha'],
+        $facturaInfo['fecha_timbrado'] ?? $facturaInfo['fecha'],
+        $facturaInfo['subtotal'] ?? 0,
+        $facturaInfo['descuento'] ?? 0,
+        $facturaInfo['impuestos'] ?? 0,
+        $facturaInfo['total'],
+        $facturaInfo['moneda'] ?? 'MXN',
+        $facturaInfo['tipo_cambio'] ?? 1,
+        $facturaInfo['condiciones_pago'] ?? 'CONTADO',
+        $facturaInfo['metodo_pago'] ?? 'PPD',
+        $facturaInfo['forma_pago'] ?? '99',
+        $facturaInfo['uso_cfdi'] ?? 'G01',
+        'pagado', // estado
+        $facturaInfo['observaciones'] ?? null,
+        now(),
+        auth()->id() ?? 1
+    ]);
+
+    $nuevaFactura = $resultado[0];
+
+    Log::info("✅ Factura creada", [
+        'id' => $nuevaFactura->id,
+        'serie_folio' => $serie . '-' . $folio,
+        'total' => $nuevaFactura->total
+    ]);
+
+    return $nuevaFactura;
+}
     /**
      * 📚 PROCESAR LIBROS Y CREAR DETALLES DE FACTURA - MEJORADO
      */

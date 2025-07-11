@@ -48,7 +48,7 @@ const SeccionFactura: React.FC<{
     guardando: boolean;
     datosFactura?: DatosFactura;
 }> = ({ nuevoLibro, setNuevoLibro, guardando, datosFactura }) => {
-    
+
     const tieneFacturaCompleta = () => {
         return !!(
             (nuevoLibro.serieFactura || datosFactura?.serie) &&
@@ -72,14 +72,14 @@ const SeccionFactura: React.FC<{
                     <div>
                         <h3 className="text-lg font-semibold text-gray-900">Información de Factura</h3>
                         <p className="text-sm text-gray-600">
-                            {tieneFacturaCompleta() 
+                            {tieneFacturaCompleta()
                                 ? '✅ Configurada - Todos los libros se vincularán a esta factura'
                                 : '🔒 Obligatorio - Los libros siempre deben estar vinculados a una factura'
                             }
                         </p>
                     </div>
                 </div>
-                
+
                 {tieneFacturaCompleta() && (
                     <div className="flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
                         <CheckCircle className="h-4 w-4" />
@@ -187,8 +187,8 @@ const SeccionFactura: React.FC<{
                     <input
                         type="text"
                         value={nuevoLibro.editorial_nombre || datosFactura?.editorial || ''}
-                        onChange={(e) => setNuevoLibro((prev) => ({ 
-                            ...prev, 
+                        onChange={(e) => setNuevoLibro((prev) => ({
+                            ...prev,
                             editorial_nombre: e.target.value,
                         }))}
                         className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
@@ -253,7 +253,7 @@ const SeccionFactura: React.FC<{
                         <div>
                             <p className="text-sm font-medium text-red-800">Factura Obligatoria</p>
                             <p className="mt-1 text-xs text-red-700">
-                                El sistema requiere que todos los libros estén vinculados a una factura. 
+                                El sistema requiere que todos los libros estén vinculados a una factura.
                                 Complete la información requerida para continuar.
                             </p>
                         </div>
@@ -264,12 +264,12 @@ const SeccionFactura: React.FC<{
     );
 };
 
-const PasoInformacionBasica: React.FC<PasoProps> = ({ 
-    nuevoLibro, 
-    setNuevoLibro, 
-    guardando, 
-    onBuscarISBN, 
-    buscandoISBNs 
+const PasoInformacionBasica: React.FC<PasoProps> = ({
+    nuevoLibro,
+    setNuevoLibro,
+    guardando,
+    onBuscarISBN,
+    buscandoISBNs
 }) => (
     <div className="space-y-6">
         <div className="rounded-lg bg-gray-50 p-6">
@@ -896,7 +896,7 @@ export const LibroManualForm: React.FC<LibroManualFormProps> = ({
     return (
         <div className="space-y-6">
             {/* ✅ SECCIÓN DE FACTURA (FUERA DE PASOS) */}
-            <SeccionFactura 
+            <SeccionFactura
                 nuevoLibro={nuevoLibro}
                 setNuevoLibro={setNuevoLibro}
                 guardando={guardando}
@@ -923,27 +923,27 @@ export const LibroManualForm: React.FC<LibroManualFormProps> = ({
                     </div>
 
                     {/* Contenido de cada paso */}
-                    {pasoActual === 1 && <PasoInformacionBasica 
-                        nuevoLibro={nuevoLibro} 
-                        setNuevoLibro={setNuevoLibro} 
+                    {pasoActual === 1 && <PasoInformacionBasica
+                        nuevoLibro={nuevoLibro}
+                        setNuevoLibro={setNuevoLibro}
                         guardando={guardando}
                         onBuscarISBN={onBuscarISBN}
                         buscandoISBNs={buscandoISBNs}
                     />}
-                    {pasoActual === 2 && <PasoAutorEditorial 
-                        nuevoLibro={nuevoLibro} 
-                        setNuevoLibro={setNuevoLibro} 
+                    {pasoActual === 2 && <PasoAutorEditorial
+                        nuevoLibro={nuevoLibro}
+                        setNuevoLibro={setNuevoLibro}
                         guardando={guardando}
                     />}
-                    {pasoActual === 3 && <PasoInformacionComercial 
-                        nuevoLibro={nuevoLibro} 
-                        setNuevoLibro={setNuevoLibro} 
+                    {pasoActual === 3 && <PasoInformacionComercial
+                        nuevoLibro={nuevoLibro}
+                        setNuevoLibro={setNuevoLibro}
                         guardando={guardando}
                     />}
-                    {pasoActual === 4 && <PasoDetallesAdicionales 
-                        nuevoLibro={nuevoLibro} 
-                        setNuevoLibro={setNuevoLibro} 
-                        guardando={guardando} 
+                    {pasoActual === 4 && <PasoDetallesAdicionales
+                        nuevoLibro={nuevoLibro}
+                        setNuevoLibro={setNuevoLibro}
+                        guardando={guardando}
                     />}
 
                     {/* Botones de navegación */}
@@ -970,7 +970,7 @@ export const LibroManualForm: React.FC<LibroManualFormProps> = ({
                     </div>
                     <h3 className="mb-2 text-lg font-medium text-gray-900">Factura Requerida</h3>
                     <p className="text-sm text-gray-600">
-                        Todos los libros deben estar vinculados a una factura. Complete la información de factura arriba 
+                        Todos los libros deben estar vinculados a una factura. Complete la información de factura arriba
                         para poder agregar libros al inventario con la trazabilidad fiscal correcta.
                     </p>
                 </div>
@@ -1192,3 +1192,5 @@ const ValidationIndicator: React.FC<{
         </div>
     </div>
 );
+
+
