@@ -1,13 +1,13 @@
 // ============================================
-// 📁 hooks/useLibrosFacturas.ts - HOOK PRINCIPAL CORREGIDO
+// 📁 hooks/useLibrosFacturas.ts - HOOK PRINCIPAL COMPLETO FINAL
 // ============================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { toast } from 'react-toastify';
-import { 
-  LibroCompleto, 
-  DatosFactura, 
-  ResultadoGuardado, 
+import {
+  LibroCompleto,
+  DatosFactura,
+  ResultadoGuardado,
   EstadisticasPostGuardado,
 } from '@/types/LibroCompleto';
 
@@ -22,7 +22,8 @@ export interface EstadisticasBusqueda {
   ultimaActualizacion: Date;
 }
 
-export const useLibrosFacturas = () => {
+// ✅ MODIFICAR: Agregar callback de reinicio como parámetro opcional
+export const useLibrosFacturas = (onReinicioCompleto?: (mostrarToast?: boolean) => void) => {
   const [libros, setLibros] = useState<LibroCompleto[]>([]);
   const [modoAgregar, setModoAgregar] = useState<'manual' | 'factura'>('factura');
   const [editando, setEditando] = useState<string | null>(null);
@@ -33,12 +34,12 @@ export const useLibrosFacturas = () => {
   const [buscandoISBNs, setBuscandoISBNs] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [mostrarEstadisticasAvanzadas, setMostrarEstadisticasAvanzadas] = useState(false);
-  
+
   const [libroSeleccionado, setLibroSeleccionado] = useState<LibroCompleto | null>(null);
   const [modalDetallesAbierto, setModalDetallesAbierto] = useState(false);
   const [resultadoGuardado, setResultadoGuardado] = useState<ResultadoGuardado | null>(null);
   const [estadisticasPostGuardado, setEstadisticasPostGuardado] = useState<EstadisticasPostGuardado | null>(null);
-  
+
   const [estadisticasBusqueda, setEstadisticasBusqueda] = useState<EstadisticasBusqueda | null>(null);
 
   const { flash, resultado, estadisticasPost } = usePage().props as {
@@ -47,7 +48,9 @@ export const useLibrosFacturas = () => {
     estadisticasPost?: EstadisticasPostGuardado;
   };
 
-  // ✅ EFECTO PARA MANEJAR FLASH MESSAGES Y RESULTADOS
+  // ============================================
+  // 🔄 EFECTO PARA MANEJAR FLASH MESSAGES Y RESULTADOS
+  // ============================================
   useEffect(() => {
     if (flash?.error) {
       toast.error(flash.error, {
@@ -76,6 +79,9 @@ export const useLibrosFacturas = () => {
     }
   }, [flash, resultado, estadisticasPost]);
 
+  // ============================================
+  // 📚 FUNCIONES DE MANEJO DE LIBROS
+  // ============================================
   const eliminarLibro = useCallback((id: string) => {
     setLibros((prev) => prev.filter((libro) => libro.id !== id));
     toast.info('📚 Libro eliminado de la lista', {
@@ -94,7 +100,7 @@ export const useLibrosFacturas = () => {
               ...libro,
               ...libroEditado,
               total:
-                (libroEditado.valorUnitario || libro.valorUnitario) * 
+                (libroEditado.valorUnitario || libro.valorUnitario) *
                 (libroEditado.cantidad || libro.cantidad) -
                 (libroEditado.descuento || libro.descuento),
             }
@@ -111,6 +117,9 @@ export const useLibrosFacturas = () => {
     });
   }, []);
 
+  // ============================================
+  // 🔍 FUNCIONES DE MODAL DE DETALLES
+  // ============================================
   const abrirModalDetalles = useCallback((libro: LibroCompleto) => {
     setLibroSeleccionado(libro);
     setModalDetallesAbierto(true);
@@ -131,11 +140,10 @@ export const useLibrosFacturas = () => {
     cerrarModalDetalles();
   }, [eliminarLibro, cerrarModalDetalles]);
 
-  // ✅ FUNCIÓN LIMPIAR FACTURA CORREGIDA
+  // ============================================
+  // 🧹 FUNCIONES DE LIMPIEZA
+  // ============================================
   const limpiarFactura = useCallback(() => {
-    const confirmar = confirm('¿Está seguro de limpiar la factura actual? Se mantendrán los libros ya agregados.');
-
-    if (confirmar) {
       setDatosFactura(null);
       setArchivoXML(null);
       setEstadisticasBusqueda(null);
@@ -146,31 +154,28 @@ export const useLibrosFacturas = () => {
         theme: 'colored',
         toastId: 'limpiar-factura',
       });
-    }
   }, []);
 
-  // ✅ FUNCIÓN LIMPIAR TODO CORREGIDA
+  // ✅ FUNCIÓN LIMPIAR TODO CORREGIDA - SIN TOAST NI CONFIRMACIÓN (para uso interno)
   const limpiarTodo = useCallback(() => {
-    if (confirm('¿Está seguro de limpiar toda la lista de libros y datos de factura?')) {
-      setLibros([]);
-      setEstadisticasBusqueda(null);
-      setDatosFactura(null);
-      setArchivoXML(null);
-      
-      toast.success('🧹 Lista completamente limpiada', {
-        position: 'top-center',
-        autoClose: 2000,
-        theme: 'colored',
-        toastId: 'limpiar-todo',
-      });
-    }
+    console.log('🧹 Ejecutando limpiarTodo desde hook (sin toast)...');
+
+    setLibros([]);
+    setEstadisticasBusqueda(null);
+    setDatosFactura(null);
+    setArchivoXML(null);
+
+    // ❌ SIN TOAST - será manejado por el componente padre
   }, []);
 
+  // ============================================
+  // 📋 FUNCIONES DE RESULTADOS
+  // ============================================
   const cerrarResultadoGuardado = useCallback(() => {
     const resultadoActual = resultadoGuardado;
     setResultadoGuardado(null);
     setEstadisticasPostGuardado(null);
-    
+
     if (resultadoActual && resultadoActual.guardados > 0) {
       const confirmarLimpiar = confirm(
         `Se guardaron ${resultadoActual.guardados} libros exitosamente. ¿Desea limpiar la lista actual?`
@@ -181,7 +186,7 @@ export const useLibrosFacturas = () => {
         setEstadisticasBusqueda(null);
         setDatosFactura(null);
         setArchivoXML(null);
-        
+
         toast.success('✨ Lista limpiada después del guardado exitoso', {
           position: 'top-center',
           autoClose: 2000,
@@ -193,7 +198,7 @@ export const useLibrosFacturas = () => {
   }, [resultadoGuardado]);
 
   // =============================================
-  // 💾 FUNCIÓN DE GUARDADO CORREGIDA
+  // 💾 FUNCIÓN DE GUARDADO PRINCIPAL CON AUTO-REINICIO
   // =============================================
   const guardarLibrosEnInventario = useCallback(() => {
     if (libros.length === 0) {
@@ -212,7 +217,7 @@ export const useLibrosFacturas = () => {
       const folio = libro.folioFactura || datosFactura?.folio;
       const fecha = libro.fechaFactura || datosFactura?.fecha;
       const editorial = libro.editorial?.nombre || libro.editorial_nombre;
-      
+
       return serie && folio && fecha && editorial;
     });
 
@@ -240,7 +245,7 @@ export const useLibrosFacturas = () => {
       return etiquetas.length > 0 ? etiquetas : ['General'];
     };
 
-    // Preparar datos para enviar
+    // ✅ PREPARAR DATOS PARA ENVIAR
     const librosParaGuardar = libros.map((libro) => ({
       isbn: libro.isbn,
       titulo: libro.titulo,
@@ -261,13 +266,15 @@ export const useLibrosFacturas = () => {
       folio: libro.folio,
       fechaFactura: libro.fechaFactura,
       fuente: libro.fuente,
-      // ✅ Campos adicionales
+
+      // ✅ CAMPOS ADICIONALES
       peso: libro.peso,
       dimensiones: libro.dimensiones,
       url_compra: libro.url_compra,
       ubicacion_fisica: libro.ubicacion_fisica,
       notas_internas: libro.notas_internas,
-      // ✅ Campos fiscales 
+
+      // ✅ CAMPOS FISCALES
       clave_prodserv: libro.clave_prodserv || '55101500',
       unidad: libro.unidad || 'PZA',
       claveUnidad: libro.claveUnidad || 'H87',
@@ -285,21 +292,21 @@ export const useLibrosFacturas = () => {
     console.log('💾 === GUARDADO CON FACTURA OBLIGATORIA ===');
     console.log('📦 Datos preparados para guardar:', librosParaGuardar);
 
-    // ✅ Construir datos de factura desde el primer libro
+    // ✅ CONSTRUIR DATOS DE FACTURA desde el primer libro
     const primerLibro = libros[0];
-    
+
     // ✅ CONSTRUIR FOLIO COMPLETO
     const serie = primerLibro.serieFactura || datosFactura?.serie || '';
     const folioNumero = primerLibro.folioFactura || datosFactura?.folio || '';
     const folioCompleto = folioNumero.startsWith(serie) ? folioNumero : `${serie}${folioNumero}`;
-    
+
     const facturaInfo = {
-      // Datos básicos 
+      // Datos básicos
       serie: serie,
       folio: folioCompleto,
       fecha: primerLibro.fechaFactura || datosFactura?.fecha || '',
       rfc: primerLibro.rfcProveedor || datosFactura?.rfc || '',
-      
+
       // Montos calculados
       subtotal: librosParaGuardar.reduce((sum, libro) => sum + (libro.valorUnitario * libro.cantidad), 0),
       descuento: librosParaGuardar.reduce((sum, libro) => sum + (libro.descuento || 0), 0),
@@ -322,7 +329,7 @@ export const useLibrosFacturas = () => {
 
     console.log('📄 Información de factura construida:', facturaInfo);
 
-    // ✅ DATOS DE ENVÍO
+    // ✅ DATOS DE ENVÍO COMPLETOS
     const datosEnvio = {
       libros: librosParaGuardar,
       factura_info: facturaInfo,
@@ -344,13 +351,13 @@ export const useLibrosFacturas = () => {
         fuente: 'LibrosFacturas-Component',
         tiene_xml: !!(datosFactura && datosFactura.conceptosOriginales),
         conceptos_originales: datosFactura?.conceptosOriginales?.length || 0,
-        origen: datosFactura && datosFactura.conceptosOriginales 
-          ? 'xml_procesado' 
+        origen: datosFactura && datosFactura.conceptosOriginales
+          ? 'xml_procesado'
           : 'captura_manual_con_factura'
       },
     };
 
-    // ✅ TOAST DE INICIO ÚNICO
+    // ✅ TOAST DE INICIO
     toast.info('⏳ Procesando factura y libros...', {
       position: 'top-center',
       autoClose: 2000,
@@ -358,7 +365,7 @@ export const useLibrosFacturas = () => {
       toastId: 'procesando-inicio',
     });
 
-    // ✅ ENVÍO A BACKEND
+    // ✅ ENVÍO A BACKEND CON AUTO-REINICIO
     router.post('/facturas-libros/procesar', datosEnvio, {
       preserveState: true,
       preserveScroll: true,
@@ -367,51 +374,57 @@ export const useLibrosFacturas = () => {
       },
       onSuccess: (response) => {
         console.log('✅ Procesamiento completo exitoso:', response);
-        
-        // ✅ TOAST DE ÉXITO ÚNICO Y DETALLADO
+
+        // ✅ TOAST DE ÉXITO CON INDICACIÓN DE REINICIO
         const { libros_procesados, etiquetas_creadas, autores_creados, editoriales_creadas, factura_id } = response.props || {};
-        
-        let mensaje = `🎉 Procesamiento exitoso!\n`;
+
+        let mensaje = `🎉 ¡Guardado exitoso!\n`;
         mensaje += `📚 ${libros_procesados || librosParaGuardar.length} libros guardados\n`;
         mensaje += `📄 Factura ${facturaInfo.folio} registrada`;
-        
+
         if (factura_id) {
           mensaje += ` (ID: ${factura_id})`;
         }
-        
+
         if (autores_creados > 0) {
           mensaje += `\n👤 ${autores_creados} autores nuevos`;
         }
-        
+
         if (editoriales_creadas > 0) {
           mensaje += `\n🏢 ${editoriales_creadas} editoriales nuevas`;
         }
-        
+
         if (etiquetas_creadas > 0) {
           mensaje += `\n🏷️ ${etiquetas_creadas} etiquetas nuevas`;
         }
 
+        mensaje += `\n🔄 Reiniciando para nueva factura...`;
+
         toast.success(mensaje, {
           position: 'top-center',
-          autoClose: 8000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
+          autoClose: 4000,
           theme: 'colored',
-          toastId: 'guardado-exitoso',
+          toastId: 'guardado-exitoso-reinicio',
         });
 
-        // ✅ LIMPIAR DATOS DESPUÉS DEL GUARDADO EXITOSO
+        // ✅ LIMPIAR DATOS DEL HOOK INMEDIATAMENTE
         setLibros([]);
         setDatosFactura(null);
         setEstadisticasBusqueda(null);
         setArchivoXML(null);
+
+        // ✅ REINICIAR COMPONENTE DESPUÉS DE 1.5 SEGUNDOS
+        setTimeout(() => {
+          if (onReinicioCompleto) {
+            console.log('🔄 Ejecutando reinicio completo post-guardado...');
+            onReinicioCompleto(false); // false = no mostrar toast adicional
+          }
+        }, 1500);
       },
       onError: (errors) => {
         console.error('💥 Error procesando factura y libros:', errors);
         const errorMessage = errors.message || 'Error al procesar la factura y los libros';
-        
+
         toast.error(`💥 ${errorMessage}`, {
           position: 'top-center',
           autoClose: 8000,
@@ -428,9 +441,11 @@ export const useLibrosFacturas = () => {
         console.log('🏁 Procesamiento finalizado');
       },
     });
-  }, [libros, datosFactura]);
+  }, [libros, datosFactura, onReinicioCompleto]); // ✅ Incluir onReinicioCompleto en dependencias
 
-  // ✅ ESTADÍSTICAS CALCULADAS
+  // =============================================
+  // 📊 ESTADÍSTICAS CALCULADAS
+  // =============================================
   const estadisticas = useMemo(() => {
     const stats = {
       total: libros.length,
@@ -473,8 +488,11 @@ export const useLibrosFacturas = () => {
     return stats;
   }, [libros]);
 
+  // =============================================
+  // 📤 RETURN DEL HOOK COMPLETO
+  // =============================================
   return {
-    // Estados
+    // ✅ ESTADOS PRINCIPALES
     libros,
     setLibros,
     modoAgregar,
@@ -485,32 +503,44 @@ export const useLibrosFacturas = () => {
     setArchivoXML,
     datosFactura,
     setDatosFactura,
+
+    // ✅ ESTADOS DE PROGRESO Y CARGA
     progresoBusqueda,
     setProgresoBusqueda,
     buscandoISBNs,
     setBuscandoISBNs,
     guardando,
     setGuardando,
+
+    // ✅ ESTADOS DE UI
     mostrarEstadisticasAvanzadas,
     setMostrarEstadisticasAvanzadas,
     libroSeleccionado,
     modalDetallesAbierto,
+
+    // ✅ ESTADOS DE RESULTADOS
     resultadoGuardado,
     estadisticasPostGuardado,
     estadisticasBusqueda,
     setEstadisticasBusqueda,
     estadisticas,
-    
-    // Funciones
+
+    // ✅ FUNCIONES DE MANEJO DE LIBROS
     eliminarLibro,
     guardarEdicion,
+
+    // ✅ FUNCIONES DE MODAL
     abrirModalDetalles,
     cerrarModalDetalles,
     editarLibroDesdeModal,
     eliminarLibroDesdeModal,
+
+    // ✅ FUNCIONES DE LIMPIEZA
     limpiarFactura,
-    limpiarTodo,
+    limpiarTodo, // ✅ Sin toast ni confirmación interna
+
+    // ✅ FUNCIONES PRINCIPALES
     cerrarResultadoGuardado,
-    guardarLibrosEnInventario,
+    guardarLibrosEnInventario, // ✅ Con auto-reinicio incluido
   };
 };

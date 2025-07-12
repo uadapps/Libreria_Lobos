@@ -2,9 +2,9 @@
 // 📁 components/libros-facturas/FacturaXMLComponents.tsx
 // ============================================
 import React, { useCallback } from 'react';
-import { 
-  Upload, 
-  FileText, 
+import {
+  Upload,
+  FileText,
   Loader,
 } from 'lucide-react';
 import { DatosFactura, FacturaLibro, ConceptoFactura } from '@/types/LibroCompleto';
@@ -81,25 +81,28 @@ export const InfoFacturaProcesada: React.FC<{
   onLimpiar: () => void;
 }> = ({ datosFactura, onLimpiar }) => {
   return (
-    <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <FileText className="h-5 w-5 text-blue-600" />
-          <div>
-            <p className="text-sm font-medium text-blue-800">Factura Procesada: {datosFactura.folio}</p>
-            <p className="text-xs text-blue-600">
-              {datosFactura.fecha} • {datosFactura.editorial} • {datosFactura.numeroConceptos} conceptos
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={onLimpiar}
-          className="bg-blue-600 text-white rounded px-3 py-1 text-sm hover:bg-blue-700"
-          title="Procesar nueva factura"
-        >
-          Nueva Factura
-        </button>
+    <div className="border rounded-lg p-4 bg-green-50">
+      <div className="mb-2">
+        <span className="font-bold">Folio:</span> {datosFactura.folio}
       </div>
+      <div className="mb-2">
+        <span className="font-bold">Fecha:</span> {datosFactura.fecha}
+      </div>
+      <div className="mb-2">
+        <span className="font-bold">Editorial:</span> {datosFactura.editorial}
+      </div>
+      <div className="mb-2">
+        <span className="font-bold">RFC:</span> {datosFactura.emisor?.rfc}
+      </div>
+      <div className="mb-2">
+        <span className="font-bold">Total:</span> ${datosFactura.total}
+      </div>
+      <button
+        onClick={onLimpiar}
+        className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+      >
+        Limpiar factura
+      </button>
     </div>
   );
 };
@@ -260,7 +263,7 @@ export const extraerTituloYAutor = (descripcion: string): { titulo: string; auto
 
 export const pareceNombrePersona = (texto: string): boolean => {
   const palabras = texto.split(' ');
-  return palabras.length >= 2 && palabras.length <= 4 && 
+  return palabras.length >= 2 && palabras.length <= 4 &&
          palabras.every((palabra) => /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+$/.test(palabra));
 };
 export const useFacturaXMLProcessor = () => {

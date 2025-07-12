@@ -1,10 +1,14 @@
 // ============================================
-// 📁 hooks/Books/useLibroManual.ts - HOOK COMPLETO CON PASOS
+// 📁 hooks/Books/useLibroManual.ts - CÓDIGO COMPLETO FINAL CON BLOQUEO MANUAL
 // ============================================
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { DatabaseSearchService } from '@/services/ISBN/DatabaseSearchService';
 import { LibroCompleto, DatosFactura } from '@/types/LibroCompleto';
 
+// ============================================
+// 📋 INTERFACE LibroManual
+// ============================================
 export interface LibroManual {
   // Campos básicos
   isbn: string;
@@ -12,7 +16,7 @@ export interface LibroManual {
   cantidad: number;
   valorUnitario: number;
   descuento: number;
-  
+
   // Información del libro
   autor_nombre: string;
   autor_apellidos: string;
@@ -20,22 +24,22 @@ export interface LibroManual {
   año_publicacion: number | null;
   paginas: number | null;
   descripcion: string;
-  
+
   // Categorización
   genero: string;
   etiquetas: string;
-  
+
   // Imágenes y URLs
   imagen_url: string;
   url_compra: string;
-  
+
   // Físicos
   peso: number | null;
   dimensiones: string;
   estado_fisico: string;
   ubicacion_fisica: string;
   notas_internas: string;
-  
+
   // Campos fiscales
   clave_prodserv: string;
   unidad: string;
@@ -57,6 +61,9 @@ export interface LibroManual {
   uuidFactura: string;
 }
 
+// ============================================
+// 📊 ESTADO INICIAL
+// ============================================
 const LIBRO_MANUAL_INICIAL: LibroManual = {
   // Campos básicos
   isbn: '',
@@ -64,7 +71,7 @@ const LIBRO_MANUAL_INICIAL: LibroManual = {
   cantidad: 1,
   valorUnitario: 0,
   descuento: 0,
-  
+
   // Información del libro
   autor_nombre: '',
   autor_apellidos: '',
@@ -72,22 +79,22 @@ const LIBRO_MANUAL_INICIAL: LibroManual = {
   año_publicacion: null,
   paginas: null,
   descripcion: '',
-  
+
   // Categorización
   genero: 'General',
   etiquetas: '',
-  
+
   // Imágenes y URLs
   imagen_url: '',
   url_compra: '',
-  
+
   // Físicos
   peso: null,
   dimensiones: '',
   estado_fisico: 'nuevo',
   ubicacion_fisica: '',
   notas_internas: '',
-  
+
   // Campos fiscales
   clave_prodserv: '55101500',
   unidad: 'PZA',
@@ -109,27 +116,48 @@ const LIBRO_MANUAL_INICIAL: LibroManual = {
   uuidFactura: '',
 };
 
+// ============================================
+// 🎯 HOOK PRINCIPAL
+// ============================================
 export const useLibroManual = (
   setLibros: React.Dispatch<React.SetStateAction<LibroCompleto[]>>,
   datosFactura: DatosFactura | null,
   setBuscandoISBNs: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  // ✅ ESTADOS DEL FORMULARIO
+
+  // ============================================
+  // 📊 ESTADOS DEL FORMULARIO
+  // ============================================
   const [nuevoLibro, setNuevoLibro] = useState<LibroManual>(LIBRO_MANUAL_INICIAL);
-  
-  // ✅ ESTADOS DEL WIZARD/PASOS
+
+  // ============================================
+  // 📊 ESTADOS DEL WIZARD/PASOS
+  // ============================================
   const [pasoActual, setPasoActual] = useState(1);
   const [pasoCompletado, setPasoCompletado] = useState<{ [key: number]: boolean }>({});
   const [etiquetasSeleccionadas, setEtiquetasSeleccionadas] = useState<string[]>([]);
-  
-  // ✅ ESTADOS ADICIONALES
+
+  // ============================================
+  // 📊 ESTADOS ADICIONALES
+  // ============================================
   const [isEditorialNueva, setIsEditorialNueva] = useState(false);
   const [isAutorNuevo, setIsAutorNuevo] = useState(false);
   const [isGeneroNuevo, setIsGeneroNuevo] = useState(false);
 
-  // ✅ FUNCIÓN PARA PRELLENAR DATOS DESDE FACTURA
+  // ✅ Estado para bloquear/desbloquear campos de factura
+  const [facturaDesbloqueada, setFacturaDesbloqueada] = useState(false);
+
+  // ============================================
+  // 🔧 FUNCIÓN PARA PRELLENAR DATOS DESDE FACTURA XML
+  // ============================================
   const prellenarDatosDesdeFactura = useCallback(() => {
     if (datosFactura && datosFactura.procesado) {
+      console.log('🔄 Prellenando datos desde factura XML:', {
+        serie: datosFactura.serie,
+        folio: datosFactura.folio,
+        editorial: datosFactura.editorial
+      });
+
       setNuevoLibro((prev) => ({
         ...prev,
         // Datos de la factura
@@ -137,23 +165,82 @@ export const useLibroManual = (
         folioFactura: datosFactura.folio || '',
         fechaFactura: datosFactura.fecha || '',
         uuidFactura: datosFactura.uuid || '',
-        
+
         // Datos del proveedor
         editorial_nombre: datosFactura.editorial || prev.editorial_nombre,
         rfcProveedor: datosFactura.rfc || '',
         regimenFiscalProveedor: datosFactura.regimenFiscal || '',
       }));
+
+      // ✅ BLOQUEAR automáticamente con factura XML
+      setFacturaDesbloqueada(false);
+      console.log('🔒 Campos de factura bloqueados automáticamente (factura XML)');
     }
   }, [datosFactura]);
 
-  // ✅ EFECTO PARA PRELLENAR CUANDO HAY FACTURA
+  // ✅ NUEVA: Función para auto-bloquear cuando se completa factura manual
+  const autoBloquearFacturaCompleta = useCallback(() => {
+    // Solo si no hay factura XML procesada
+    if (!datosFactura?.procesado) {
+      const facturaManualCompleta = !!(
+        nuevoLibro.serieFactura &&
+        nuevoLibro.folioFactura &&
+        nuevoLibro.fechaFactura &&
+        nuevoLibro.editorial_nombre &&
+        nuevoLibro.rfcProveedor &&
+        nuevoLibro.uuidFactura
+      );
+
+      if (facturaManualCompleta && facturaDesbloqueada) {
+        console.log('🔒 Factura manual completa detectada - Bloqueando automáticamente');
+        console.log('✅ Campos completos:', {
+          serie: nuevoLibro.serieFactura,
+          folio: nuevoLibro.folioFactura,
+          fecha: nuevoLibro.fechaFactura,
+          editorial: nuevoLibro.editorial_nombre,
+          rfc: nuevoLibro.rfcProveedor,
+          uuid: nuevoLibro.uuidFactura
+        });
+
+        setFacturaDesbloqueada(false);
+      }
+    }
+  }, [nuevoLibro.serieFactura, nuevoLibro.folioFactura, nuevoLibro.fechaFactura, nuevoLibro.editorial_nombre, nuevoLibro.rfcProveedor, nuevoLibro.uuidFactura, datosFactura, facturaDesbloqueada]);
+
+  // ✅ Función para alternar bloqueo de factura
+  const toggleBloqueoFactura = useCallback(() => {
+    setFacturaDesbloqueada(prev => {
+      const nuevoEstado = !prev;
+      console.log(`${nuevoEstado ? '🔓' : '🔒'} Campos de factura ${nuevoEstado ? 'desbloqueados' : 'bloqueados'}`);
+      return nuevoEstado;
+    });
+  }, []);
+
+  // ============================================
+  // 🔄 EFECTOS
+  // ============================================
+
+  // Efecto para prellenar cuando hay factura XML
   useEffect(() => {
     if (datosFactura) {
       prellenarDatosDesdeFactura();
     }
   }, [datosFactura, prellenarDatosDesdeFactura]);
 
-  // ✅ FUNCIÓN PARA VALIDAR PASO
+  // ✅ NUEVO: Efecto para auto-bloquear factura manual completa
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      autoBloquearFacturaCompleta();
+    }, 1000); // 1 segundo de delay para no interrumpir al usuario
+
+    return () => clearTimeout(timer);
+  }, [autoBloquearFacturaCompleta]);
+
+  // ============================================
+  // 🔧 FUNCIONES DEL WIZARD
+  // ============================================
+
+  // Función para validar paso
   const validarPaso = useCallback((paso: number): boolean => {
     switch (paso) {
       case 1: // Información Básica
@@ -171,7 +258,7 @@ export const useLibroManual = (
     }
   }, [nuevoLibro]);
 
-  // ✅ FUNCIÓN PARA AVANZAR PASO
+  // Función para avanzar paso
   const avanzarPaso = useCallback(() => {
     if (validarPaso(pasoActual)) {
       setPasoCompletado((prev) => ({ ...prev, [pasoActual]: true }));
@@ -188,14 +275,14 @@ export const useLibroManual = (
     }
   }, [pasoActual, validarPaso]);
 
-  // ✅ FUNCIÓN PARA RETROCEDER PASO
+  // Función para retroceder paso
   const retrocederPaso = useCallback(() => {
     if (pasoActual > 1) {
       setPasoActual(pasoActual - 1);
     }
   }, [pasoActual]);
 
-  // ✅ FUNCIÓN PARA IR A PASO ESPECÍFICO
+  // Función para ir a paso específico
   const irAPaso = useCallback((paso: number) => {
     const accesible = paso <= pasoActual || pasoCompletado[paso];
     if (accesible && paso >= 1 && paso <= 5) {
@@ -203,7 +290,9 @@ export const useLibroManual = (
     }
   }, [pasoActual, pasoCompletado]);
 
-  // ✅ FUNCIÓN PARA BUSCAR ISBN
+  // ============================================
+  // 🔍 FUNCIÓN PARA BUSCAR ISBN
+  // ============================================
   const buscarPorISBNManual = useCallback(async (isbn: string) => {
     if (!isbn || isbn.length < 10) {
       toast.warning('Ingrese un ISBN válido (10 o 13 dígitos)', {
@@ -216,35 +305,44 @@ export const useLibroManual = (
     }
 
     setBuscandoISBNs(true);
-    
-    try {
-      const response = await fetch(`/api/libros/buscar-isbn/${isbn}`);
-      const data = await response.json();
 
-      if (data.encontrado) {
+    try {
+      console.log('🔍 Buscando ISBN en BD:', isbn);
+
+      // ✅ USAR DatabaseSearchService
+      const libroInfo = await DatabaseSearchService.buscarPorISBN(isbn, { debug: true });
+
+      if (libroInfo) {
+        console.log('✅ Libro encontrado en BD:', libroInfo.titulo);
+
         // Prellenar datos encontrados
         setNuevoLibro((prev) => ({
           ...prev,
-          isbn: data.libro.isbn || isbn,
-          titulo: data.libro.titulo || prev.titulo,
-          autor_nombre: data.libro.autor?.nombre || prev.autor_nombre,
-          autor_apellidos: data.libro.autor?.apellidos || prev.autor_apellidos,
-          editorial_nombre: data.libro.editorial?.nombre || prev.editorial_nombre,
-          año_publicacion: data.libro.año_publicacion || prev.año_publicacion,
-          paginas: data.libro.paginas || prev.paginas,
-          descripcion: data.libro.descripcion || prev.descripcion,
-          imagen_url: data.libro.imagen_url || prev.imagen_url,
-          peso: data.libro.peso || prev.peso,
-          dimensiones: data.libro.dimensiones || prev.dimensiones,
+          isbn: libroInfo.isbn || isbn,
+          titulo: libroInfo.titulo || prev.titulo,
+          autor_nombre: libroInfo.autor?.nombre || prev.autor_nombre,
+          autor_apellidos: libroInfo.autor?.apellidos || prev.autor_apellidos,
+          editorial_nombre: libroInfo.editorial?.nombre || prev.editorial_nombre,
+          año_publicacion: libroInfo.año_publicacion || prev.año_publicacion,
+          paginas: libroInfo.paginas || prev.paginas,
+          descripcion: libroInfo.descripcion || prev.descripcion,
+          imagen_url: libroInfo.imagen_url || prev.imagen_url,
+          peso: libroInfo.peso || prev.peso,
+          dimensiones: libroInfo.dimensiones || prev.dimensiones,
+          valorUnitario: libroInfo.valorUnitario || libroInfo.precio_compra || prev.valorUnitario,
         }));
 
-        toast.success(`📚 Libro encontrado: ${data.libro.titulo}`, {
+        toast.success(`📚 Libro encontrado en BD: ${libroInfo.titulo}`, {
           position: 'top-center',
           autoClose: 3000,
           theme: 'colored',
           toastId: 'isbn-encontrado',
         });
+
+        console.log(`✅ Datos prellenados desde BD (${libroInfo.fuente})`);
       } else {
+        console.log('❌ ISBN no encontrado en BD');
+
         toast.info('📖 ISBN no encontrado en la base de datos. Complete manualmente.', {
           position: 'top-center',
           autoClose: 4000,
@@ -253,10 +351,10 @@ export const useLibroManual = (
         });
       }
     } catch (error) {
-      console.error('Error buscando ISBN:', error);
-      toast.error('Error al buscar ISBN. Verifique la conexión.', {
+      console.error('💥 Error buscando ISBN en BD:', error);
+      toast.error('Error al buscar información del libro. Verifique la conexión a la base de datos.', {
         position: 'top-center',
-        autoClose: 5000,
+        autoClose: 7000,
         theme: 'colored',
         toastId: 'error-buscar-isbn',
       });
@@ -265,8 +363,118 @@ export const useLibroManual = (
     }
   }, [setBuscandoISBNs]);
 
-  // ✅ FUNCIÓN PARA AGREGAR LIBRO
+  // ============================================
+  // 🔄 FUNCIONES DE RESETEO
+  // ============================================
+
+  // Resetear solo los campos del libro, mantener factura
+  const resetearSoloLibro = useCallback(() => {
+    console.log('🔄 Reseteando solo campos del libro, manteniendo factura');
+
+    setNuevoLibro(prev => ({
+      ...prev,
+      // ✅ LIMPIAR SOLO campos del libro
+      isbn: '',
+      titulo: '',
+      cantidad: 1,
+      valorUnitario: 0,
+      descuento: 0,
+      autor_nombre: '',
+      autor_apellidos: '',
+      año_publicacion: null,
+      paginas: null,
+      descripcion: '',
+      genero: 'General',
+      etiquetas: '',
+      imagen_url: '',
+      url_compra: '',
+      peso: null,
+      dimensiones: '',
+      estado_fisico: 'nuevo',
+      ubicacion_fisica: '',
+      notas_internas: '',
+
+      // ✅ MANTENER TODOS los datos de factura y fiscales
+      editorial_nombre: prev.editorial_nombre,
+      folioFactura: prev.folioFactura,
+      serieFactura: prev.serieFactura,
+      fechaFactura: prev.fechaFactura,
+      uuidFactura: prev.uuidFactura,
+      rfcProveedor: prev.rfcProveedor,
+      regimenFiscalProveedor: prev.regimenFiscalProveedor,
+
+      // ✅ MANTENER campos SAT
+      clave_prodserv: prev.clave_prodserv,
+      unidad: prev.unidad,
+      claveUnidad: prev.claveUnidad,
+      objetoImp: prev.objetoImp,
+      metodoPago: prev.metodoPago,
+      formaPago: prev.formaPago,
+      condicionesPago: prev.condicionesPago,
+      usoCfdi: prev.usoCfdi,
+      tipoImpuesto: prev.tipoImpuesto,
+
+      // ✅ RESETEAR solo valores de impuestos (se recalculan por libro)
+      baseImpuesto: null,
+      tasaImpuesto: 0,
+      importeImpuesto: 0,
+    }));
+
+    // ✅ VOLVER AL PASO 1 después de agregar libro
+    setPasoActual(1);
+    setPasoCompletado({});
+    setEtiquetasSeleccionadas([]);
+
+    // ✅ MANTENER el estado de bloqueo de factura
+    console.log('✅ Reset completado - Vuelta al paso 1, datos de factura mantenidos');
+  }, []);
+
+  // Resetear formulario completo
+  const resetearFormulario = useCallback(() => {
+    console.log('🔄 Reseteando formulario completo');
+
+    setNuevoLibro(LIBRO_MANUAL_INICIAL);
+    setPasoActual(1);
+    setPasoCompletado({});
+    setEtiquetasSeleccionadas([]);
+    setIsEditorialNueva(false);
+    setIsAutorNuevo(false);
+    setIsGeneroNuevo(false);
+
+    // ✅ RESETEAR también el estado de bloqueo
+    setFacturaDesbloqueada(false);
+
+    // Si hay factura activa, prellenar sus datos
+    if (datosFactura) {
+      setTimeout(() => {
+        prellenarDatosDesdeFactura();
+      }, 100);
+    }
+  }, [datosFactura, prellenarDatosDesdeFactura]);
+
+  // Resetear completo (para cambio de factura)
+  const resetearCompleto = useCallback(() => {
+    console.log('🔄 Reseteo completo (cambio de factura)');
+
+    setNuevoLibro(LIBRO_MANUAL_INICIAL);
+    setPasoActual(1);
+    setPasoCompletado({});
+    setEtiquetasSeleccionadas([]);
+    setIsEditorialNueva(false);
+    setIsAutorNuevo(false);
+    setIsGeneroNuevo(false);
+
+    // ✅ DESBLOQUEAR campos para nueva factura
+    setFacturaDesbloqueada(true);
+    console.log('🔓 Campos de factura desbloqueados para nueva factura');
+  }, []);
+
+  // ============================================
+  // ➕ FUNCIÓN PARA AGREGAR LIBRO
+  // ============================================
   const agregarLibroManual = useCallback(() => {
+    console.log('📚 === INICIANDO AGREGAR LIBRO ===');
+
     if (!nuevoLibro.titulo || !nuevoLibro.isbn) {
       toast.warning('Título e ISBN son requeridos', {
         position: 'top-center',
@@ -294,7 +502,7 @@ export const useLibroManual = (
       editorial: { nombre: nuevoLibro.editorial_nombre || 'Editorial Desconocida' },
       genero: { nombre: etiquetasSeleccionadas.join(', ') || nuevoLibro.genero || 'General' },
       estado: 'procesado',
-      fuente: datosFactura ? 'Manual (con factura)' : 'Manual',
+      fuente: datosFactura ? 'Manual + Factura XML' : 'Manual + Factura Manual',
 
       // Campos adicionales
       año_publicacion: nuevoLibro.año_publicacion,
@@ -309,13 +517,13 @@ export const useLibroManual = (
       ubicacion_fisica: nuevoLibro.ubicacion_fisica,
       notas_internas: nuevoLibro.notas_internas,
 
-      // Datos fiscales si existen
+      // Datos fiscales
       clave_prodserv: nuevoLibro.clave_prodserv,
       folio: nuevoLibro.folioFactura || datosFactura?.folio || '',
       fechaFactura: nuevoLibro.fechaFactura || datosFactura?.fecha || '',
       uuid: nuevoLibro.uuidFactura || datosFactura?.uuid || '',
       rfcProveedor: nuevoLibro.rfcProveedor || datosFactura?.rfc || '',
-      
+
       // Campos adicionales del formulario fiscal
       serieFactura: nuevoLibro.serieFactura || datosFactura?.serie || '',
       folioFactura: nuevoLibro.folioFactura || datosFactura?.folio || '',
@@ -331,65 +539,36 @@ export const useLibroManual = (
       impuestos: nuevoLibro.importeImpuesto || 0,
     };
 
+    console.log('📚 Libro creado:', {
+      titulo: libro.titulo,
+      folio: libro.folio,
+      fuente: libro.fuente,
+      total: libro.total
+    });
+
     setLibros((prev) => [...prev, libro]);
+    resetearSoloLibro();
 
-    // ✅ RESETEAR FORMULARIO COMPLETO (incluyendo pasos)
-    resetearFormulario();
+    const facturaRef = `${nuevoLibro.serieFactura || datosFactura?.serie}${nuevoLibro.folioFactura || datosFactura?.folio}`;
 
-    toast.success('✅ Libro agregado exitosamente', {
+    toast.success(`✅ Libro agregado a factura ${facturaRef}. Listo para el siguiente libro.`, {
       position: 'top-center',
-      autoClose: 2000,
+      autoClose: 3000,
       theme: 'colored',
       toastId: 'libro-agregado',
     });
-  }, [nuevoLibro, etiquetasSeleccionadas, datosFactura, setLibros]);
 
-  // ✅ FUNCIÓN PARA RESETEAR FORMULARIO COMPLETO
-  const resetearFormulario = useCallback(() => {
-    setNuevoLibro(LIBRO_MANUAL_INICIAL);
-    setPasoActual(1);
-    setPasoCompletado({});
-    setEtiquetasSeleccionadas([]);
-    setIsEditorialNueva(false);
-    setIsAutorNuevo(false);
-    setIsGeneroNuevo(false);
+    console.log(`📚 Libro agregado. Factura ${facturaRef} mantenida para próximo libro.`);
+  }, [nuevoLibro, etiquetasSeleccionadas, datosFactura, setLibros, resetearSoloLibro]);
 
-    // Si hay factura activa, prellenar sus datos
-    if (datosFactura) {
-      setTimeout(() => {
-        prellenarDatosDesdeFactura();
-      }, 100); // Pequeño delay para asegurar que el reset se complete
-    }
-  }, [datosFactura, prellenarDatosDesdeFactura]);
-
-  // ✅ FUNCIÓN PARA RESETEAR SOLO LIBRO (mantener pasos)
-  const resetearSoloLibro = useCallback(() => {
-    setNuevoLibro(LIBRO_MANUAL_INICIAL);
-    
-    // Si hay factura activa, prellenar sus datos
-    if (datosFactura) {
-      setTimeout(() => {
-        prellenarDatosDesdeFactura();
-      }, 100);
-    }
-  }, [datosFactura, prellenarDatosDesdeFactura]);
-
-  // ✅ FUNCIÓN PARA RESETEAR COMPLETO (para cambio de factura)
-  const resetearCompleto = useCallback(() => {
-    setNuevoLibro(LIBRO_MANUAL_INICIAL);
-    setPasoActual(1);
-    setPasoCompletado({});
-    setEtiquetasSeleccionadas([]);
-    setIsEditorialNueva(false);
-    setIsAutorNuevo(false);
-    setIsGeneroNuevo(false);
-  }, []);
-
+  // ============================================
+  // 📤 RETURN DEL HOOK
+  // ============================================
   return {
     // Estados del formulario
     nuevoLibro,
     setNuevoLibro,
-    
+
     // Estados del wizard
     pasoActual,
     setPasoActual,
@@ -397,7 +576,7 @@ export const useLibroManual = (
     setPasoCompletado,
     etiquetasSeleccionadas,
     setEtiquetasSeleccionadas,
-    
+
     // Estados adicionales
     isEditorialNueva,
     setIsEditorialNueva,
@@ -405,19 +584,29 @@ export const useLibroManual = (
     setIsAutorNuevo,
     isGeneroNuevo,
     setIsGeneroNuevo,
-    
+
+    // ✅ Estado y función para bloqueo de factura
+    facturaDesbloqueada,
+    setFacturaDesbloqueada,
+    toggleBloqueoFactura,
+
     // Funciones de validación y navegación
     validarPaso,
     avanzarPaso,
     retrocederPaso,
     irAPaso,
-    
+
     // Funciones principales
     buscarPorISBNManual,
     agregarLibroManual,
+
+    // Funciones de reseteo
     resetearFormulario,
     resetearSoloLibro,
-    resetearCompleto, // ✅ NUEVA para cambio de factura
+    resetearCompleto,
     prellenarDatosDesdeFactura,
+
+    // ✅ NUEVA: Función de auto-bloqueo para uso manual si es necesario
+    autoBloquearFacturaCompleta,
   };
 };
