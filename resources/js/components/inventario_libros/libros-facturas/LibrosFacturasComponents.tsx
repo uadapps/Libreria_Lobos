@@ -232,57 +232,7 @@ export const ResultadoGuardado: React.FC<{
 // =============================================
 // 📊 ESTADÍSTICAS AVANZADAS
 // =============================================
-export const EstadisticasAvanzadas: React.FC<{
-  estadisticas: EstadisticasLibros;
-}> = ({ estadisticas }) => {
-  return (
-    <div className="sticky top-0 z-10 bg-white">
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
-          <BarChart3 className="h-5 w-5" />
-          Estadísticas Detalladas
-        </h3>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-          <div className="rounded-lg bg-blue-50 p-3">
-            <div className="text-2xl font-bold text-blue-800">{estadisticas.total}</div>
-            <div className="text-sm text-blue-600">Total libros</div>
-          </div>
-          <div className="rounded-lg bg-green-50 p-3">
-            <div className="text-2xl font-bold text-green-800">
-              {estadisticas.procesados}
-              <span className="ml-1 text-sm">({estadisticas.porcentajeProcesados}%)</span>
-            </div>
-            <div className="text-sm text-green-600">Procesados</div>
-          </div>
-          {estadisticas.errores > 0 && (
-            <div className="rounded-lg bg-red-50 p-3">
-              <div className="text-2xl font-bold text-red-800">
-                {estadisticas.errores}
-                <span className="ml-1 text-sm">({estadisticas.porcentajeErrores}%)</span>
-              </div>
-              <div className="text-sm text-red-600">Con errores</div>
-            </div>
-          )}
-          <div className="rounded-lg bg-emerald-50 p-3">
-            <div className="text-xl font-bold text-emerald-800">${estadisticas.valorTotal.toFixed(2)}</div>
-            <div className="text-sm text-emerald-600">Valor total</div>
-          </div>
-          <div className="rounded-lg bg-orange-50 p-3">
-            <div className="text-2xl font-bold text-orange-800">{estadisticas.cantidadTotal}</div>
-            <div className="text-sm text-orange-600">Unidades</div>
-          </div>
-          <div className="rounded-lg bg-purple-50 p-3">
-            <div className="text-2xl font-bold text-purple-800">
-              {estadisticas.conImagenes}
-              <span className="ml-1 text-sm">({estadisticas.porcentajeConImagenes}%)</span>
-            </div>
-            <div className="text-sm text-purple-600">Con imagen</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+
 
 // =============================================
 // 🔄 PROGRESO DE BÚSQUEDA

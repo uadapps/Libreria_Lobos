@@ -1,10 +1,10 @@
 // ============================================
-// 📁 pages/libros-facturas/index.tsx - SOLO FACTURAS
+// 📁 pages/libros-facturas/index.tsx - SOLUCIÓN SIMPLE Y FUNCIONAL
 // ============================================
 import { Button } from '@headlessui/react';
 import { Head } from '@inertiajs/react';
-import { BarChart3, Loader, Plus, Save, Trash2, File, Receipt } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { File, Loader, Receipt, Save, Trash2 } from 'lucide-react';
+import { useCallback, useMemo, useState, useRef } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -16,10 +16,9 @@ import { useEnriquecimientoBD } from '@/hooks/Books/useEnriquecimientoBD';
 import { useLibroManual } from '@/hooks/Books/useLibroManual';
 import { useLibrosFacturas } from '@/hooks/Books/useLibrosFacturas';
 
-import { FacturaXMLUploader, InfoFacturaProcesada } from '@/components/inventario_libros/libros-facturas/FacturaXMLComponents';
+import { FacturaXMLUploader } from '@/components/inventario_libros/libros-facturas/FacturaXMLComponents';
 import { LibroManualForm } from '@/components/inventario_libros/libros-facturas/LibroManualComponents';
 import {
-    EstadisticasAvanzadas,
     EstadisticasBusqueda,
     ProgresoBusqueda,
     ResultadoGuardado,
@@ -28,11 +27,58 @@ import LibroDetallesModal from '@/components/libros/LibroDetailsModal';
 import VistaLibros from '@/components/libros/VistaLibros';
 
 export default function LibrosFacturas() {
+    // ✅ ESTADOS PRINCIPALES
+    const [facturaConfirmada, setFacturaConfirmada] = useState(false);
+    const [modoAgregar, setModoAgregar] = useState<'manual' | 'factura'>('factura');
+
+    // ✅ REF PARA FUNCIÓN DE RESETEO (evita problemas de inicialización)
+    const resetearCompletoRef = useRef<(() => void) | null>(null);
+
+    // ✅ FUNCIÓN PARA LIMPIEZA COMPLETA Y AUTO-REINICIO
+    const ejecutarLimpiezaCompleta = useCallback((mostrarToast: boolean = false) => {
+        console.log('🔄 === EJECUTANDO LIMPIEZA COMPLETA ===', { mostrarToast });
+
+        try {
+            // 1. Resetear estado de factura confirmada
+            setFacturaConfirmada(false);
+
+            // 2. Volver al modo de selección inicial
+            setModoAgregar('factura');
+
+            // 3. ✅ LIMPIAR FORMULARIO MANUAL (usando ref)
+            if (resetearCompletoRef.current) {
+                resetearCompletoRef.current();
+                console.log('✅ Formulario manual reseteado');
+            }
+
+            console.log('✅ Limpieza completa del componente exitosa');
+
+            // ✅ TOAST SOLO SI SE SOLICITA (para limpieza manual)
+            if (mostrarToast) {
+                toast.success('🔄 Todo limpiado. Puede empezar de nuevo con una nueva factura.', {
+                    position: 'top-center',
+                    autoClose: 3000,
+                    theme: 'colored',
+                    toastId: 'limpiar-todo-completo'
+                });
+            }
+
+        } catch (error) {
+            console.error('💥 Error durante la limpieza:', error);
+            if (mostrarToast) {
+                toast.error('❌ Error al limpiar. Intente nuevamente.', {
+                    position: 'top-center',
+                    autoClose: 3000,
+                    theme: 'colored',
+                });
+            }
+        }
+    }, []);
+
+    // ✅ HOOKS PRINCIPALES
     const {
         libros,
         setLibros,
-        modoAgregar,
-        setModoAgregar,
         editando,
         setEditando,
         archivoXML,
@@ -44,8 +90,6 @@ export default function LibrosFacturas() {
         buscandoISBNs,
         setBuscandoISBNs,
         guardando,
-        mostrarEstadisticasAvanzadas,
-        setMostrarEstadisticasAvanzadas,
         libroSeleccionado,
         modalDetallesAbierto,
         resultadoGuardado,
@@ -63,21 +107,21 @@ export default function LibrosFacturas() {
         limpiarTodo,
         cerrarResultadoGuardado,
         guardarLibrosEnInventario,
-    } = useLibrosFacturas();
-    
-    // ✅ HOOK PARA AGREGAR LIBROS A LA FACTURA EXISTENTE
-    const { 
-        nuevoLibro, 
-        setNuevoLibro, 
-        agregarLibroManual, 
-        buscarPorISBNManual,
-        resetearFormulario,
-        resetearSoloLibro 
-    } = useLibroManual(setLibros, datosFactura, setBuscandoISBNs);
+    } = useLibrosFacturas(ejecutarLimpiezaCompleta); // ✅ PASAR FUNCIÓN DE REINICIO
+
+    // ✅ HOOK MANUAL
+    const { nuevoLibro, setNuevoLibro, agregarLibroManual, buscarPorISBNManual, resetearCompleto } = useLibroManual(
+        setLibros,
+        datosFactura,
+        setBuscandoISBNs,
+    );
+
+    // ✅ ASIGNAR FUNCIÓN DE RESETEO AL REF
+    resetearCompletoRef.current = resetearCompleto;
 
     const { procesarFacturaXML } = useFacturaXMLProcessor();
     const { enriquecerLibrosConBaseDatos } = useEnriquecimientoBD(setLibros, setProgresoBusqueda, setEstadisticasBusqueda);
-    
+
     const handleProcesarFactura = useCallback(
         async (archivo: File) => {
             try {
@@ -90,6 +134,13 @@ export default function LibrosFacturas() {
                     enriquecerLibrosConBaseDatos,
                     setArchivoXML,
                 );
+                // ✅ Auto-confirmar cuando se procesa XML exitosamente
+                setFacturaConfirmada(true);
+                toast.success('✅ Factura XML procesada y confirmada automáticamente', {
+                    position: 'top-center',
+                    autoClose: 3000,
+                    theme: 'colored',
+                });
             } catch (error) {
                 const errorMessage =
                     typeof error === 'object' && error !== null && 'message' in error ? (error as { message?: string }).message : undefined;
@@ -97,6 +148,7 @@ export default function LibrosFacturas() {
                     position: 'top-center',
                     autoClose: 7000,
                     theme: 'colored',
+                    toastId: 'error-procesar-xml',
                 });
             }
         },
@@ -122,45 +174,54 @@ export default function LibrosFacturas() {
         [buscarPorISBNManual],
     );
 
-    // ✅ FUNCIÓN PARA CAMBIAR FACTURA LIMPIANDO TODO
-    const handleCambiarFactura = useCallback(() => {
-        // Si hay libros, pedir confirmación
-        if (libros.length > 0) {
-            if (!confirm(`¿Está seguro de que desea cambiar la factura? Se perderán ${libros.length} libro(s) en la lista actual.`)) {
+    // ✅ FUNCIÓN LIMPIAR TODO MANUAL - UNA SOLA CONFIRMACIÓN
+    const handleLimpiarTodo = useCallback(() => {
+        console.log('🗑️ === INICIANDO LIMPIAR TODO MANUAL ===');
+        console.log('📊 Estado actual:', {
+            libros: libros.length,
+            facturaConfirmada,
+            datosFactura: !!datosFactura,
+            archivoXML: !!archivoXML
+        });
+
+        // ✅ MOSTRAR CONFIRMACIÓN SOLO SI HAY DATOS QUE PERDER
+        if (libros.length > 0 || facturaConfirmada || datosFactura) {
+            const confirmar = confirm(
+                `¿Está seguro de que desea limpiar todo y empezar de nuevo?\n\n` +
+                `Se perderán:\n` +
+                `• ${libros.length} libro(s) en la lista\n` +
+                `• La configuración de factura actual\n` +
+                `• Todas las estadísticas y progreso\n\n` +
+                `Esta acción no se puede deshacer.`
+            );
+
+            if (!confirmar) {
+                console.log('❌ Usuario canceló la operación');
                 return;
             }
         }
-        
-        // Limpiar todo el estado de factura
-        limpiarFactura();
-        setDatosFactura(null);
-        setArchivoXML(null);
-        
-        // Limpiar formulario manual
-        resetearFormulario();
-        
-        // Limpiar libros si los hay
-        setLibros([]);
-        
-        // Volver al modo de selección de factura
-        setModoAgregar('factura');
-        
-        toast.info('🔄 Factura limpiada. Configure una nueva factura.', {
-            position: 'top-center',
-            autoClose: 3000,
-            theme: 'colored',
-        });
-    }, [libros.length, limpiarFactura, setDatosFactura, setArchivoXML, resetearFormulario, setLibros, setModoAgregar]);
 
-    // ✅ VERIFICAR SI HAY FACTURA CONFIGURADA
-    const tieneFacturaConfigurada = () => {
-        return !!(datosFactura || (
-            nuevoLibro.serieFactura && 
-            nuevoLibro.folioFactura && 
-            nuevoLibro.fechaFactura && 
-            nuevoLibro.editorial_nombre
-        ));
-    };
+        console.log('✅ Confirmación recibida - Ejecutando limpieza manual...');
+
+        // ✅ LLAMAR A TODAS LAS FUNCIONES DE LIMPIEZA
+        try {
+            // 1. Limpiar hook principal (SIN confirmación ni toast adicional)
+            limpiarTodo();
+
+            // 2. Ejecutar limpieza completa CON toast (limpieza manual)
+            ejecutarLimpiezaCompleta(true);
+
+            console.log('🎉 Limpieza manual completa exitosa');
+
+        } catch (error) {
+            console.error('💥 Error durante la limpieza manual:', error);
+            toast.error('❌ Error al limpiar. Intente nuevamente.', {
+                position: 'top-center',
+                autoClose: 3000,
+                theme: 'colored',
+            });
+        }
+    }, [libros.length, facturaConfirmada, datosFactura, archivoXML, limpiarTodo, ejecutarLimpiezaCompleta]);
 
     // =============================================
     // 📊 BREADCRUMBS
@@ -182,8 +243,8 @@ export default function LibrosFacturas() {
 
             <div className="space-y-6 px-6 py-4">
                 {/* =============================================
-        // 📝 HEADER CON CONTROLES
-        // ============================================= */}
+                // 📝 HEADER CON CONTROLES
+                // ============================================= */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
@@ -191,78 +252,53 @@ export default function LibrosFacturas() {
                             {(buscandoISBNs || guardando) && <Loader className="h-6 w-6 animate-spin text-blue-600" />}
                         </h1>
                         <p className="mt-1 text-sm text-gray-600">
-                            {!tieneFacturaConfigurada() 
-                                ? 'Procese una factura para comenzar a agregar libros al inventario'
-                                : 'Agregue libros a la factura configurada'
-                            }
+                            {!facturaConfirmada
+                                ? 'Configure una factura para comenzar a agregar libros al inventario'
+                                : 'Agregue libros a la factura configurada'}
                         </p>
                     </div>
 
                     {/* Controles del header */}
                     <div className="flex items-center gap-3">
-                        {libros.length > 0 && (
-                            <>
-                                <button
-                                    onClick={() => setMostrarEstadisticasAvanzadas(!mostrarEstadisticasAvanzadas)}
-                                    className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${
-                                        mostrarEstadisticasAvanzadas ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    <BarChart3 className="h-4 w-4" />
-                                    Estadísticas
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (confirm('¿Está seguro de que desea limpiar todo? Se perderán todos los libros y la configuración de factura.')) {
-                                            handleCambiarFactura();
-                                        }
-                                    }}
-                                    className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-white transition-colors hover:bg-red-700"
-                                    disabled={guardando}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                    Limpiar Todo
-                                </button>
-                            </>
+                        {/* ✅ Botón limpiar todo - solo si hay algo que limpiar */}
+                        {(libros.length > 0 || facturaConfirmada || datosFactura) && (
+                            <button
+                                onClick={handleLimpiarTodo}
+                                className="flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-white transition-colors hover:bg-red-700"
+                                disabled={guardando}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Limpiar Todo
+                            </button>
                         )}
                     </div>
                 </div>
 
-                {/* =============================================
-        // 📄 INFORMACIÓN DE FACTURA PROCESADA
-        // ============================================= */}
-                {datosFactura && <InfoFacturaProcesada datosFactura={datosFactura} onLimpiar={limpiarFactura} />}
 
                 {/* =============================================
-        // 📊 ESTADÍSTICAS AVANZADAS
-        // ============================================= */}
-                {mostrarEstadisticasAvanzadas && libros.length > 0 && <EstadisticasAvanzadas estadisticas={estadisticas} />}
-
-                {/* =============================================
-        // 🔄 INDICADORES DE PROGRESO
-        // ============================================= */}
+                // 🔄 INDICADORES DE PROGRESO
+                // ============================================= */}
                 {guardando && (
                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                         <div className="flex items-center gap-3">
                             <Loader className="h-5 w-5 animate-spin text-blue-600" />
                             <div className="flex-1">
                                 <p className="text-sm font-medium text-blue-800">💾 Guardando libros en inventario...</p>
-                                <p className="mt-1 text-xs text-blue-600">Creando relaciones inteligentes con autores, editoriales y etiquetas</p>
+                                <p className="mt-1 text-xs text-blue-600">
+                                    🔄 El sistema se reiniciará automáticamente después del guardado
+                                </p>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {estadisticasBusqueda && <EstadisticasBusqueda estadisticas={estadisticasBusqueda} />}
-
                 {progresoBusqueda && <ProgresoBusqueda progreso={progresoBusqueda} />}
 
                 {/* =============================================
-        // 📝 FLUJO PRINCIPAL - FACTURA PRIMERO
-        // ============================================= */}
-                
-                {!tieneFacturaConfigurada() ? (
-                    /* ✅ FASE 1: CONFIGURAR FACTURA */
+                // 📝 CONFIGURACIÓN DE FACTURA - SOLO SI NO ESTÁ CONFIRMADA
+                // ============================================= */}
+                {!facturaConfirmada && (
                     <div className="rounded-lg border bg-white p-6 shadow-sm">
                         <div className="mb-6 text-center">
                             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
@@ -307,7 +343,7 @@ export default function LibrosFacturas() {
                             </button>
                         </div>
 
-                        {/* Modo Factura XML */}
+                        {/* Contenido según el modo */}
                         {modoAgregar === 'factura' && (
                             <FacturaXMLUploader
                                 archivoXML={archivoXML}
@@ -320,7 +356,6 @@ export default function LibrosFacturas() {
                             />
                         )}
 
-                        {/* Modo Factura Manual */}
                         {modoAgregar === 'manual' && (
                             <LibroManualForm
                                 nuevoLibro={nuevoLibro}
@@ -330,44 +365,18 @@ export default function LibrosFacturas() {
                                 onBuscarISBN={handleBuscarISBN}
                                 buscandoISBNs={buscandoISBNs}
                                 datosFactura={datosFactura}
+                                // ✅ NUEVO: Props para confirmación de factura
+                                facturaConfirmada={facturaConfirmada}
+                                onConfirmarFactura={() => setFacturaConfirmada(true)}
                             />
                         )}
                     </div>
-                ) : (
-                    /* ✅ FASE 2: AGREGAR LIBROS A FACTURA EXISTENTE */
-                    <div className="rounded-lg border bg-white p-6 shadow-sm">
-                        <div className="mb-6 flex items-center justify-between">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900">Agregar Libros a la Factura</h2>
-                                <p className="mt-1 text-sm text-gray-600">
-                                    Agregue libros individuales a la factura configurada
-                                </p>
-                            </div>
-                            <button
-                                onClick={handleCambiarFactura}
-                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
-                                disabled={guardando}
-                            >
-                                <Receipt className="h-4 w-4" />
-                                Cambiar Factura
-                            </button>
-                        </div>
-
-                        <LibroManualForm
-                            nuevoLibro={nuevoLibro}
-                            setNuevoLibro={setNuevoLibro}
-                            guardando={guardando}
-                            onAgregarLibro={agregarLibroManual}
-                            onBuscarISBN={handleBuscarISBN}
-                            buscandoISBNs={buscandoISBNs}
-                            datosFactura={datosFactura}
-                        />
-                    </div>
                 )}
 
+
                 {/* =============================================
-        // 📚 VISTA DE LIBROS
-        // ============================================= */}
+                // 📚 LISTA DE LIBROS Y ACCIONES
+                // ============================================= */}
                 {libros.length > 0 && (
                     <>
                         <VistaLibros
@@ -383,6 +392,9 @@ export default function LibrosFacturas() {
                         <div className="rounded-lg border bg-white shadow-sm">
                             <div className="border-t bg-gray-50 p-6">
                                 <div className="flex items-center justify-between">
+                                    <div className="text-lg font-semibold text-gray-900">
+                                        Total: {libros.length} libro(s) - ${estadisticas.valorTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                    </div>
                                     <div className="flex gap-3">
                                         <Button
                                             onClick={guardarLibrosEnInventario}
@@ -394,11 +406,19 @@ export default function LibrosFacturas() {
                                         </Button>
                                     </div>
                                 </div>
+                                {libros.length > 0 && !guardando && (
+                                    <div className="mt-2 text-xs text-gray-500">
+                                        💡 Tip: Después de guardar, el sistema se reiniciará automáticamente para procesar una nueva factura
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </>
                 )}
-                
+
+                {/* =============================================
+                // 📋 MODALES Y RESULTADOS
+                // ============================================= */}
                 {resultadoGuardado && (
                     <ResultadoGuardado
                         resultado={resultadoGuardado}
@@ -416,7 +436,19 @@ export default function LibrosFacturas() {
                     readonly={false}
                 />
             </div>
-            <ToastContainer position="top-center" autoClose={3000} theme="colored" />
+
+            <ToastContainer
+                position="top-center"
+                autoClose={3000}
+                theme="colored"
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                limit={3}
+            />
         </AppLayout>
     );
 }
