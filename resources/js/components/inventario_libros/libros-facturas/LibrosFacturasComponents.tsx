@@ -12,6 +12,7 @@ import {
   Users,
   Building2,
   Tag,
+  BarChart3,
   Loader
 } from 'lucide-react';
 import { LibroCompleto, EstadisticasLibros } from '@/types/LibroCompleto';
@@ -93,8 +94,6 @@ export const FlashMessage: React.FC<{
         <button
           onClick={onClose}
           className="text-gray-400 hover:text-gray-600 transition-colors"
-          title="Cerrar mensaje"
-          aria-label="Cerrar mensaje"
         >
           <X className="h-4 w-4" />
         </button>
@@ -125,7 +124,6 @@ export const ResultadoGuardado: React.FC<{
             <button
               onClick={onCerrar}
               className="text-gray-400 hover:text-gray-600"
-              title="Cerrar"
             >
               <X className="h-5 w-5" />
             </button>
@@ -230,6 +228,10 @@ export const ResultadoGuardado: React.FC<{
     </div>
   );
 };
+
+// =============================================
+// 📊 ESTADÍSTICAS AVANZADAS
+// =============================================
 
 
 // =============================================

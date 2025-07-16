@@ -76,36 +76,7 @@ export const FacturaXMLUploader: React.FC<FacturaXMLProps> = ({
   );
 };
 
-export const InfoFacturaProcesada: React.FC<{
-  datosFactura: DatosFactura;
-  onLimpiar: () => void;
-}> = ({ datosFactura, onLimpiar }) => {
-  return (
-    <div className="border rounded-lg p-4 bg-green-50">
-      <div className="mb-2">
-        <span className="font-bold">Folio:</span> {datosFactura.folio}
-      </div>
-      <div className="mb-2">
-        <span className="font-bold">Fecha:</span> {datosFactura.fecha}
-      </div>
-      <div className="mb-2">
-        <span className="font-bold">Editorial:</span> {datosFactura.editorial}
-      </div>
-      <div className="mb-2">
-        <span className="font-bold">RFC:</span> {datosFactura.emisor?.rfc}
-      </div>
-      <div className="mb-2">
-        <span className="font-bold">Total:</span> ${datosFactura.total}
-      </div>
-      <button
-        onClick={onLimpiar}
-        className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-      >
-        Limpiar factura
-      </button>
-    </div>
-  );
-};
+
 
 export const extraerDatosFactura = (xmlDoc: Document): { datosFactura: DatosFactura; librosExtraidos: FacturaLibro[] } => {
   const comprobante = xmlDoc.querySelector('Comprobante');

@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\AutorController;
 use App\Http\Controllers\Admin\EtiquetaController;
 use App\Http\Controllers\Admin\UploadController;
 use App\Http\Controllers\FacturaLibrosController;
+use App\Http\Controllers\Admin\ProveedorController;
 /*
 |--------------------------------------------------------------------------
 | Configuración Principal de Rutas
@@ -114,6 +115,9 @@ Route::middleware(['auth', 'check.user.active'])
 // ✅ ÚNICA DEFINICIÓN - Admin API con middleware correcto
 Route::middleware(['auth', 'verified'])->prefix('admin/api')->group(function () {
 
+          Route::get('/proveedores', [App\Http\Controllers\Admin\ProveedorController::class, 'index'])
+            ->name('api.proveedores');
+
     Route::get('/editoriales', [EditorialController::class, 'list'])
         ->name('api.editoriales.list');
     Route::get('/editoriales/search', [EditorialController::class, 'search'])
@@ -154,20 +158,20 @@ Route::prefix('facturas-libros')->group(function () {
 
 Route::get('/storage/{path}', function ($path) {
     $fullPath = storage_path('app/public/' . $path);
-    
+
     // Verificar que el archivo existe
     if (!file_exists($fullPath)) {
         abort(404, 'Archivo no encontrado');
     }
-    
+
     // Verificar que está dentro del directorio permitido (seguridad)
     $realPath = realpath($fullPath);
     $allowedPath = realpath(storage_path('app/public'));
-    
+
     if (!str_starts_with($realPath, $allowedPath)) {
         abort(403, 'Acceso denegado');
     }
-    
+
     // Servir el archivo con el tipo MIME correcto
     return response()->file($fullPath);
 })->where('path', '.*')->name('storage.serve');

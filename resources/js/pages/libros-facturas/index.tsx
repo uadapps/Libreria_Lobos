@@ -16,7 +16,7 @@ import { useEnriquecimientoBD } from '@/hooks/Books/useEnriquecimientoBD';
 import { useLibroManual } from '@/hooks/Books/useLibroManual';
 import { useLibrosFacturas } from '@/hooks/Books/useLibrosFacturas';
 
-import { FacturaXMLUploader, InfoFacturaProcesada } from '@/components/inventario_libros/libros-facturas/FacturaXMLComponents';
+import { FacturaXMLUploader } from '@/components/inventario_libros/libros-facturas/FacturaXMLComponents';
 import { LibroManualForm } from '@/components/inventario_libros/libros-facturas/LibroManualComponents';
 import {
     EstadisticasBusqueda,
@@ -274,10 +274,6 @@ export default function LibrosFacturas() {
                     </div>
                 </div>
 
-                {/* =============================================
-                // 📄 INFORMACIÓN DE FACTURA PROCESADA
-                // ============================================= */}
-                {datosFactura && <InfoFacturaProcesada datosFactura={datosFactura} onLimpiar={limpiarFactura} />}
 
                 {/* =============================================
                 // 🔄 INDICADORES DE PROGRESO
@@ -377,63 +373,6 @@ export default function LibrosFacturas() {
                     </div>
                 )}
 
-                {/* =============================================
-                // 📚 FORMULARIO DE AGREGAR LIBROS (SOLO SI FACTURA CONFIRMADA)
-                // ============================================= */}
-                {facturaConfirmada && (
-                    <div className="rounded-lg border bg-white p-6 shadow-sm">
-                        {/* Resumen de factura confirmada */}
-                        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-lg font-semibold text-green-800">✅ Factura Confirmada</h3>
-                                    <div className="mt-1 grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
-                                        <div>
-                                            <span className="font-medium text-green-700">Factura:</span>
-                                            <span className="ml-2 text-green-900">
-                                                {datosFactura?.serie || nuevoLibro.serieFactura}
-                                                {datosFactura?.folio || nuevoLibro.folioFactura}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <span className="font-medium text-green-700">Fecha:</span>
-                                            <span className="ml-2 text-green-900">
-                                                {datosFactura?.fecha || nuevoLibro.fechaFactura}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <span className="font-medium text-green-700">Proveedor:</span>
-                                            <span className="ml-2 text-green-900">
-                                                {datosFactura?.editorial || nuevoLibro.editorial_nombre}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900">Agregar Libros</h3>
-                            <p className="mt-1 text-sm text-gray-600">
-                                Agregue libros individuales a la factura configurada.
-                                <span className="font-medium text-blue-600"> El sistema se reiniciará automáticamente después de guardar.</span>
-                            </p>
-                        </div>
-
-                        <LibroManualForm
-                            nuevoLibro={nuevoLibro}
-                            setNuevoLibro={setNuevoLibro}
-                            guardando={guardando}
-                            onAgregarLibro={agregarLibroManual}
-                            onBuscarISBN={handleBuscarISBN}
-                            buscandoISBNs={buscandoISBNs}
-                            datosFactura={datosFactura}
-                            // ✅ Props para modo bloqueado
-                            facturaConfirmada={facturaConfirmada}
-                            onConfirmarFactura={() => {}} // No-op porque ya está confirmada
-                        />
-                    </div>
-                )}
 
                 {/* =============================================
                 // 📚 LISTA DE LIBROS Y ACCIONES
